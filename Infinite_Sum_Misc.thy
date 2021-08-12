@@ -1,4 +1,4 @@
-theory Infinite_Set_Sum_Misc
+theory Infinite_Sum_Misc
   imports HOL.Real_Vector_Spaces HOL.Limits
 begin
 
