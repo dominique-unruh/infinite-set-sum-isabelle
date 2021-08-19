@@ -1,5 +1,5 @@
 theory All
-  imports Infinite_Sum Infinite_Sum_IsaDef
+  imports Infsetsum_Infsum
 begin
 
 end

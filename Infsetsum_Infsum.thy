@@ -90,8 +90,7 @@ proof-
       by auto
   qed
   hence cauchy: "cauchy_filter F"
-    unfolding F_def
-    by (rule cauchy_filter_metric_filtermapI)  
+    unfolding F_def cauchy_filter_metric_filtermap by auto
   from complete_UNIV have "F\<le>principal UNIV \<Longrightarrow> F \<noteq> bot \<Longrightarrow> cauchy_filter F \<Longrightarrow> (\<exists>x. F \<le> nhds x)"
     unfolding complete_uniform
     by auto

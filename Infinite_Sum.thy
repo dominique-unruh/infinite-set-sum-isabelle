@@ -973,7 +973,7 @@ proof -
     by auto
 qed
 
-lemma infsetsum_subset_real:
+(* lemma infsetsum_subset_real:
   fixes f :: "'a \<Rightarrow> real"
   assumes "infsum_exists f B" and "A \<subseteq> B" and "\<And>x. x \<in> B - A \<Longrightarrow> f x \<ge> 0"
   shows "infsum f A \<le> infsum f B"
@@ -984,7 +984,7 @@ proof -
   show ?thesis
     apply (rule infsum_mono_set)
     using assms * by auto
-qed
+qed *)
 
 lemma infsetsum_subset_complex:
   fixes f :: "'a \<Rightarrow> complex"
@@ -993,8 +993,9 @@ lemma infsetsum_subset_complex:
     \<comment> \<open>Existence of \<^term>\<open>infsum f A\<close> follows from @{thm infsum_exists_set_mono_banach}\<close>
 proof -
   have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (f x)) B\<close>
-    apply (rule infsetsum_subset_real)
-    using assms infsum_exists_Re by auto
+    apply (rule infsum_mono_set)
+    using assms infsum_exists_Re apply auto
+    using infsum_exists_set_mono_banach by blast
   then have Re: \<open>Re (infsum f A) \<le> Re (infsum f B)\<close>
     by (metis assms(1) assms(2) infsum_Re infsum_exists_set_mono_banach)
   have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (f x)) B\<close>
@@ -1106,8 +1107,20 @@ proof -
   finally show ?thesis by simp
 qed
 
+lemma infsetsum_geq0:
+  fixes f :: "'a \<Rightarrow> 'b::{ordered_comm_monoid_add,linorder_topology}"
+  assumes "infsum_exists f M"
+    and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
+  shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
+proof -
+  note less_eq_complex_def[simp del]
+  have \<open>infsum f M \<ge> infsum (\<lambda>_. 0) M\<close>
+    apply (rule infsum_mono)
+    using assms by auto
+  then show ?thesis
+    by simp
+qed
 
-(* TODO: same for linorder *)
 lemma infsetsum_geq0_complex:
   fixes f :: "'a \<Rightarrow> complex"
   assumes "infsum_exists f M"
@@ -1637,41 +1650,73 @@ proof -
     using infsum_exists_def by blast
 qed
 
-lemma abs_summable_partition:
-  fixes T :: "'b set" and I :: "'a set"
-  assumes "\<And>i. f abs_summable_on S i"
-  and "(\<lambda>i. \<Sum>\<^sub>ax\<in>S i. norm (f x)) abs_summable_on I"
-  and "T \<subseteq> (\<Union>i\<in>I. S i)"
-  shows "f abs_summable_on T"
-
-lemma abs_summable_product':
-  fixes X :: "'a set" and Y :: "'b set"
-  assumes "\<And>x. (\<lambda>y. f (x,y)) abs_summable_on Y"
-    and "(\<lambda>x. \<Sum>\<^sub>ay\<in>Y. norm (f (x,y))) abs_summable_on X"
-  shows "f abs_summable_on X\<times>Y"
-
-lemma infsetsum_prod_PiE:
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c :: {real_normed_field,banach,second_countable_topology}"
-  assumes finite: "finite A"
-    and summable: "\<And>x. x \<in> A \<Longrightarrow> f x abs_summable_on B x"
-  shows "infsetsum (\<lambda>g. \<Prod>x\<in>A. f x (g x)) (PiE A B) = (\<Prod>x\<in>A. infsetsum (f x) (B x))"
-
 lemma infsetsum_0D:
-  fixes f :: "'a \<Rightarrow> real"
-  assumes "infsetsum f A = 0"
-  and abs_sum: "f abs_summable_on A"
-  and nneg: "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
-  and "x \<in> A"
+  fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add,ordered_ab_group_add,linorder_topology}"
+  assumes "infsum f A = 0"
+    and abs_sum: "infsum_exists f A"
+    and nneg: "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
+    and "x \<in> A"
   shows "f x = 0"
+proof (rule ccontr)
+  assume \<open>f x \<noteq> 0\<close>
+  have ex: \<open>infsum_exists f (A-{x})\<close>
+    apply (rule infsum_exists_cofin_subset)
+    using assms by auto
+  then have pos: \<open>infsum f (A - {x}) \<ge> 0\<close>
+    apply (rule infsetsum_geq0)
+    using nneg by auto
 
+  have [trans]: \<open>x \<ge> y \<Longrightarrow> y > z \<Longrightarrow> x > z\<close> for x y z :: 'b by auto
+
+  have \<open>infsum f A = infsum f (A-{x}) + infsum f {x}\<close>
+    apply (subst infsum_Un_disjoint[symmetric])
+    using assms ex apply auto by (metis insert_absorb) 
+  also have \<open>\<dots> \<ge> infsum f {x}\<close> (is \<open>_ \<ge> \<dots>\<close>)
+    using pos apply (rule add_increasing) by simp
+  also have \<open>\<dots> = f x\<close> (is \<open>_ = \<dots>\<close>)
+    apply (subst infsum_finite) by auto
+  also have \<open>\<dots> > 0\<close>
+    using \<open>f x \<noteq> 0\<close> assms(4) nneg by fastforce
+  finally show False
+    using assms by auto
+qed
+
+lemma infsetsum_0D_complex:
+  fixes f :: "'a \<Rightarrow> complex"
+  assumes "infsum f A = 0"
+    and abs_sum: "infsum_exists f A"
+    and nneg: "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
+    and "x \<in> A"
+  shows "f x = 0"
+proof -
+  have \<open>Im (f x) = 0\<close>
+    apply (rule infsetsum_0D[where A=A])
+    using assms by (auto simp add: abs_sum infsum_exists_Im infsum_Im)
+  moreover have \<open>Re (f x) = 0\<close>
+    apply (rule infsetsum_0D[where A=A])
+    using assms by (auto simp add: abs_sum infsum_exists_Re infsum_Re)
+  ultimately show ?thesis
+    by (simp add: complex_eqI)
+qed
+
+(* TODO same for complex *)
 lemma sum_leq_infsetsum:
-  fixes f :: "_ \<Rightarrow> real" (* TODO: generalize from real *)
+  fixes f :: "'a \<Rightarrow> 'b::{ordered_comm_monoid_add,linorder_topology}"
   assumes "infsum_exists f N"
   and "finite M"
   and "M \<subseteq> N"
   and "\<And>x. x\<in>N-M \<Longrightarrow> f x \<ge> 0"
   shows "sum f M \<le> infsum f N"
-  by (metis assms infsetsum_subset_real infsum_finite)
+  by (metis assms infsum_exists_finite infsum_finite infsum_mono_set)
+
+lemma sum_leq_infsetsum_complex:
+  fixes f :: "'a \<Rightarrow> complex"
+  assumes "infsum_exists f N"
+  and "finite M"
+  and "M \<subseteq> N"
+  and "\<And>x. x\<in>N-M \<Longrightarrow> f x \<ge> 0"
+  shows "sum f M \<le> infsum f N"
+  by (metis assms infsetsum_subset_complex infsum_finite)
 
 lemma infsetsum_cmult_left': (* TODO: reduce sort *)
   fixes f :: "'a \<Rightarrow> 'b :: {banach, real_normed_algebra, second_countable_topology, division_ring}"
@@ -1682,18 +1727,12 @@ lemma abs_summable_on_zero_diff:
   assumes "infsum_exists f A"
   and "\<And>x. x \<in> B - A \<Longrightarrow> f x = 0"
   shows "infsum_exists f B"
+  by -
 
 lemma abs_summable_on_Sigma_iff:
   "f abs_summable_on Sigma A B \<longleftrightarrow>
              (\<forall>x\<in>A. (\<lambda>y. f (x, y)) abs_summable_on B x) \<and>
              ((\<lambda>x. infsetsum (\<lambda>y. norm (f (x, y))) (B x)) abs_summable_on A)"
-
-lemma
-  fixes f :: "'a \<Rightarrow> 'c :: {banach, real_normed_field, second_countable_topology}"
-  assumes "f abs_summable_on A" and "g abs_summable_on B"
-  shows   abs_summable_on_product: "(\<lambda>(x,y). f x * g y) abs_summable_on A \<times> B"
-    and   infsetsum_product: "infsetsum (\<lambda>(x,y). f x * g y) (A \<times> B) =
-                                infsetsum f A * infsetsum g B"
 
 end
 
