@@ -530,10 +530,24 @@ lemma infsum_constant[simp]:
   apply (subst infsum_finite[OF assms])
   by simp
 
-lemma infsum_zero[simp]:
-  shows \<open>infsum (\<lambda>_. 0) S = 0\<close>
-  unfolding infsum_def sum.neutral_const
-  by (simp add: tendsto_Lim)
+lemma  
+  assumes \<open>\<And>x. x\<in>M \<Longrightarrow> f x = 0\<close>
+  shows infsum_0: \<open>infsum f M = 0\<close>
+    and infsum_ex_0: \<open>infsum_exists f M\<close>
+proof -
+  have \<open>(sum f \<longlongrightarrow> 0) (finite_subsets_at_top M)\<close>
+    apply (subst tendsto_cong[where g=\<open>\<lambda>_. 0\<close>])
+     apply (rule eventually_finite_subsets_at_top_weakI)
+    using assms by (auto simp add: subset_iff)
+  then show \<open>infsum f M = 0\<close> and \<open>infsum_exists f M\<close>
+    unfolding infsum_def infsum_exists_def 
+    by (auto simp add: tendsto_Lim)
+qed
+
+lemma  
+  shows infsum_0_simp[simp]: \<open>infsum (\<lambda>_. 0) M = 0\<close>
+    and infsum_ex_0_simp[simp]: \<open>infsum_exists (\<lambda>_. 0) M\<close>
+  by (simp_all add: infsum_0 infsum_ex_0)
 
 lemma
   fixes f g :: "'a \<Rightarrow> 'b::{topological_monoid_add, t2_space, comm_monoid_add}"
@@ -1129,11 +1143,21 @@ proof -
   finally show ?thesis by simp
 qed
 
+
+(* TODO: same for linorder *)
 lemma infsetsum_geq0_complex:
   fixes f :: "'a \<Rightarrow> complex"
-  assumes "f abs_summable_on M"
-    and fnn: "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
-  shows "infsetsum f M \<ge> 0" (is "?lhs \<ge> _")
+  assumes "infsum_exists f M"
+    and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
+  shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
+proof -
+  note less_eq_complex_def[simp del]
+  have \<open>infsum f M \<ge> infsum (\<lambda>_. 0) M\<close>
+    apply (rule infsum_mono_complex)
+    using assms by auto
+  then show ?thesis
+    by simp
+qed
 
 lemma infsetsum_cmod:
   assumes "infsum_exists f M"
