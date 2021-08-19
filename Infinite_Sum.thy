@@ -7,9 +7,6 @@ theory Infinite_Sum
     \<comment> \<open>\<^theory>\<open>Jordan_Normal_Form.Conjugate\<close> contains the instantiation \<open>complex :: ord\<close>.
                If we define our own instantiation, it would be impossible to load both
                \<^session>\<open>Jordan_Normal_Form\<close> and this theory.\<close>
-
-
-"HOL-Library.Rewrite"
 begin
 
 subsection\<open>Definition and syntax\<close>
@@ -1500,36 +1497,110 @@ proof -
     using FA_def \<open>(sum SB \<longlongrightarrow> S) FA\<close> infsum_exists_def by blast
 qed
 
-lemma infsetsum_Sigma_normed:
+lemma
+  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
+    and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,metric_space}\<close>
+  assumes \<open>\<forall>e>0. \<exists>d>0. \<forall>x y x' y' :: 'c. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x+x') (y+y') < e\<close>
+  assumes "infsum_exists f (Sigma A B)"
+  assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
+  shows infsetsum_Sigma_metric: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
+    and infsetsum_Sigma_metric_exists: "infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
+  subgoal apply (rule infsetsum_Sigma) using assms by (auto simp add: plus_uniform_cont_metric)
+  subgoal apply (rule infsetsum_Sigma_exists) using assms by (auto simp add: plus_uniform_cont_metric)
+  by -
+
+lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{real_normed_vector}\<close>
   assumes "infsum_exists f (Sigma A B)"
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
-  shows "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
-  apply (rule infsetsum_Sigma)
-  using assms by (auto simp add: plus_uniform_cont_norm)
+  shows infsetsum_Sigma_normed: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
+    and infsetsum_Sigma_normed_exists: "infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
+  subgoal apply (rule infsetsum_Sigma) using assms by (auto simp add: plus_uniform_cont_norm)
+  subgoal apply (rule infsetsum_Sigma_exists) using assms by (auto simp add: plus_uniform_cont_norm)
+  by -
 
-lemma infsetsum_Sigma':
+lemma 
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on (Sigma A B)"
-  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) (B x)) A = infsetsum (\<lambda>(x,y). f x y) (Sigma A B)"
+    and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,uniform_space}\<close>
+  assumes plus_cont: \<open>\<And>E::('c\<times>'c) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
+  assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
+  assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
+  shows infsetsum_Sigma': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
+    and infsetsum_Sigma_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
+  apply (subst infsetsum_Sigma) using assms apply auto
+  by -
 
-lemma infsetsum_Times:
-  fixes A :: "'a set" and B :: "'b set"
-  assumes summable: "f abs_summable_on (A \<times> B)"
-  shows   "infsetsum f (A \<times> B) = infsetsum (\<lambda>x. infsetsum (\<lambda>y. f (x, y)) B) A"
+lemma
+  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
+    and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,metric_space}\<close>
+  assumes \<open>\<forall>e>0. \<exists>d>0. \<forall>x y x' y' :: 'c. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x+x') (y+y') < e\<close>
+  assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
+  assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
+  shows infsetsum_Sigma_metric': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
+    and infsetsum_Sigma_metric_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
+  subgoal apply (rule infsetsum_Sigma') using assms by (auto simp add: plus_uniform_cont_metric)
+  subgoal apply (rule infsetsum_Sigma_exists') using assms by (auto simp add: plus_uniform_cont_metric)
+  by -
 
-lemma infsetsum_Times':
-  fixes A :: "'a set" and B :: "'b set"
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c :: {banach, second_countable_topology}"
-  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on (A \<times> B)"
-  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>(x,y). f x y) (A \<times> B)"
+lemma
+  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
+    and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{real_normed_vector}\<close>
+  assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
+  assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
+  shows infsetsum_Sigma_norm': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
+    and infsetsum_Sigma_norm_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
+  subgoal apply (rule infsetsum_Sigma') using assms by (auto simp add: plus_uniform_cont_norm)
+  apply (rule infsetsum_Sigma_exists') using assms by (auto simp add: plus_uniform_cont_norm)
 
-lemma infsetsum_swap:
+(* TODO: remove _Times variants also in Infsetsum.thy *)
+
+lemma
+  assumes \<open>inj_on h A\<close>
+  shows infsum_reindex: \<open>infsum g (h ` A) = infsum (g \<circ> h) A\<close> (is ?thesis1)
+    and infsum_exists_reindex: \<open>infsum_exists g (h ` A) \<longleftrightarrow> infsum_exists (g \<circ> h) A\<close> (is ?thesis2)
+proof -
+  have \<open>(sum g \<longlongrightarrow> x) (finite_subsets_at_top (h ` A)) \<longleftrightarrow> ((\<lambda>F. sum g (h ` F)) \<longlongrightarrow> x) (finite_subsets_at_top A)\<close> for x
+    apply (subst filtermap_image_finite_subsets_at_top[symmetric])
+    using assms by (auto simp: filterlim_def filtermap_filtermap)
+  also have \<open>\<dots> x \<longleftrightarrow> (sum (g \<circ> h) \<longlongrightarrow> x) (finite_subsets_at_top A)\<close> for x
+    apply (rule tendsto_cong)
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    apply (rule sum.reindex)
+    using assms subset_inj_on by blast
+  finally show ?thesis1 ?thesis2
+    apply (auto simp: infsum_exists_def)
+    by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
+qed
+
+lemma infsum_swap:
   fixes A :: "'a set" and B :: "'b set"
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c :: {banach, second_countable_topology}"
-  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on A \<times> B"
-  shows "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>y. infsetsum (\<lambda>x. f x y) A) B"
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,uniform_space}"
+  assumes plus_cont: \<open>\<And>E::('c\<times>'c) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
+  assumes \<open>infsum_exists (\<lambda>(x, y). f x y) (A \<times> B)\<close>
+  assumes \<open>\<And>a. a\<in>A \<Longrightarrow> infsum_exists (f a) B\<close>
+  assumes \<open>\<And>b. b\<in>B \<Longrightarrow> infsum_exists (\<lambda>a. f a b) A\<close>
+  shows "infsum (\<lambda>x. infsum (\<lambda>y. f x y) B) A = infsum (\<lambda>y. infsum (\<lambda>x. f x y) A) B"
+proof -
+  have [simp]: \<open>infsum_exists (\<lambda>(x, y). f y x) (B \<times> A)\<close>
+    apply (subst product_swap[symmetric])
+    apply (subst infsum_exists_reindex)
+    using assms by (auto simp: o_def)
+  have \<open>infsum (\<lambda>x. infsum (\<lambda>y. f x y) B) A = infsum (\<lambda>(x,y). f x y) (A \<times> B)\<close>
+    apply (subst infsetsum_Sigma)
+    using assms by auto
+  also have \<open>\<dots> = infsum (\<lambda>(x,y). f y x) (B \<times> A)\<close>
+    apply (subst product_swap[symmetric])
+    apply (subst infsum_reindex)
+    using assms by (auto simp: o_def)
+  also have \<open>\<dots> = infsum (\<lambda>y. infsum (\<lambda>x. f x y) A) B\<close>
+    apply (subst infsetsum_Sigma)
+    using assms by auto
+  finally show ?thesis
+    by -
+qed
+
+(* TODO: variants of infsum_swap (_metric, _norm, _banach) *)
 
 lemma abs_summable_partition:
   fixes T :: "'b set" and I :: "'a set"
