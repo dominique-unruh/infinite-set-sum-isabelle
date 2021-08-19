@@ -594,6 +594,41 @@ proof -
     unfolding fAB by -
 qed
 
+
+lemma on_filter_baseE:
+  assumes ev_INF: \<open>eventually P (INF e\<in>E. principal {x. R e x})\<close>
+  assumes [simp]: \<open>E \<noteq> {}\<close>
+  assumes \<open>\<And>a b. a \<in> E \<Longrightarrow> b \<in> E \<Longrightarrow> \<exists>x\<in>E. Collect (R x) \<subseteq> Collect (R a) \<and> Collect (R x) \<subseteq> Collect (R b)\<close>
+  assumes Q_mono: \<open>mono Q\<close>
+  assumes rewritten: \<open>\<And>e. e \<in> E \<Longrightarrow> Q (R e)\<close>
+  shows \<open>Q P\<close>
+proof -
+  obtain e where \<open>e \<in> E\<close> and \<open>eventually P (principal {x. R e x})\<close>
+    using assms by (auto simp: eventually_INF_base)
+  then have \<open>R e \<le> P\<close>
+    unfolding eventually_principal
+    by auto
+  then have \<open>Q (R e) \<Longrightarrow> Q P\<close>
+    using Q_mono
+    by (metis le_boolE monoE)
+  with rewritten \<open>e \<in> E\<close> show \<open>Q P\<close>
+    by auto
+qed
+
+lemma on_filter_base_uniformity_distE:
+  fixes P :: \<open>('a\<times>'a::{uniform_space,metric_space}) \<Rightarrow> bool\<close>
+  assumes uni: \<open>eventually P uniformity\<close>
+  assumes Q_mono: \<open>mono Q\<close>
+  assumes rewritten: \<open>\<And>e. e > 0 \<Longrightarrow> Q (\<lambda>(x,y). dist x y < e)\<close>
+  shows \<open>Q P\<close>
+  using uni
+  apply (subst (asm) uniformity_dist)
+  apply (erule on_filter_baseE)
+     apply (auto intro!: rewritten simp: Q_mono)
+  subgoal for a b by (auto intro!: bexI[of _ \<open>min a b\<close>])
+  by -
+
+
 (* Counterexample 1:
 
   Consider the real vector space V of sequences with finite support, and with the l2-norm (sum of squares).
@@ -682,13 +717,28 @@ qed
 
 lemma infsum_exists_set_mono_metric:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,complete_space}\<close>
-  assumes \<open>\<And>e. e > 0 \<Longrightarrow> \<exists>d>0. (\<forall>x y c. dist (x+c) (y+c) < d \<longrightarrow> dist x y < e)\<close>
+  assumes \<open>\<And>e. e > 0 \<Longrightarrow> \<exists>d>0. (\<forall>x y c :: 'b. dist (x+c) (y+c) < d \<longrightarrow> dist x y < e)\<close>
   assumes \<open>infsum_exists f A\<close>
   assumes \<open>B \<subseteq> A\<close>
   shows \<open>infsum_exists f B\<close>
-  apply (rule infsum_exists_set_mono)
-  apply (metis Cauchy_convergent UNIV_I complete_def convergent_def)
-  by -
+proof -
+  have \<open>complete (UNIV::'b set)\<close>
+    by (metis Cauchy_convergent UNIV_I complete_def convergent_def)
+  have cont: \<open>eventually E uniformity \<Longrightarrow> \<exists>D. eventually D uniformity \<and> (\<forall>x y c. D (x + c, y + c) \<longrightarrow> E (x, y))\<close> for E :: \<open>('b\<times>'b) \<Rightarrow> bool\<close>
+  proof (erule on_filter_base_uniformity_distE, unfold case_prod_conv)
+    show \<open>mono (\<lambda>a. \<exists>D. eventually D uniformity \<and> (\<forall>x y c. D (x + c, y + c) \<longrightarrow> a (x, y)))\<close>
+      by (smt (z3) le_bool_def le_fun_def mono_def)
+    fix e :: real assume \<open>0 < e\<close>
+    obtain d where \<open>d > 0\<close> and de: \<open>dist (x+c) (y+c) < d \<longrightarrow> dist x y < e\<close> for x y c :: 'b
+      using \<open>0 < e\<close> assms(1) by blast
+    show \<open>\<exists>D. eventually D uniformity \<and> (\<forall>x y c::'b. D (x + c, y + c) \<longrightarrow> dist x y < e)\<close>
+      apply (rule exI[of _ \<open>\<lambda>(x,y). dist x y < d\<close>])
+      using de \<open>d > 0\<close> by (auto simp: eventually_uniformity_metric)
+  qed
+  show ?thesis
+    using \<open>complete (UNIV::'b set)\<close>  cont \<open>infsum_exists f A\<close> \<open>B \<subseteq> A\<close> 
+    by (rule infsum_exists_set_mono[where A=A])
+qed
 
 lemma infsum_exists_set_mono_banach:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,banach}\<close>
@@ -696,8 +746,7 @@ lemma infsum_exists_set_mono_banach:
   assumes \<open>B \<subseteq> A\<close>
   shows \<open>infsum_exists f B\<close>
   apply (rule infsum_exists_set_mono_metric)
-  using assms apply auto
-  by -
+  using assms by auto
 
 lemma infsum_exists_union_disjoint:
   fixes f :: "'a \<Rightarrow> 'b::{topological_monoid_add, t2_space, comm_monoid_add}"
@@ -1278,40 +1327,6 @@ next
   show ?case 
     by auto
 qed
-
-
-lemma on_filter_baseE:
-  assumes ev_INF: \<open>eventually P (INF e\<in>E. principal {x. R e x})\<close>
-  assumes [simp]: \<open>E \<noteq> {}\<close>
-  assumes \<open>\<And>a b. a \<in> E \<Longrightarrow> b \<in> E \<Longrightarrow> \<exists>x\<in>E. Collect (R x) \<subseteq> Collect (R a) \<and> Collect (R x) \<subseteq> Collect (R b)\<close>
-  assumes Q_mono: \<open>mono Q\<close>
-  assumes rewritten: \<open>\<And>e. e \<in> E \<Longrightarrow> Q (R e)\<close>
-  shows \<open>Q P\<close>
-proof -
-  obtain e where \<open>e \<in> E\<close> and \<open>eventually P (principal {x. R e x})\<close>
-    using assms by (auto simp: eventually_INF_base)
-  then have \<open>R e \<le> P\<close>
-    unfolding eventually_principal
-    by auto
-  then have \<open>Q (R e) \<Longrightarrow> Q P\<close>
-    using Q_mono
-    by (metis le_boolE monoE)
-  with rewritten \<open>e \<in> E\<close> show \<open>Q P\<close>
-    by auto
-qed
-
-lemma on_filter_base_uniformity_distE:
-  fixes P :: \<open>('a\<times>'a::{uniform_space,metric_space}) \<Rightarrow> bool\<close>
-  assumes uni: \<open>eventually P uniformity\<close>
-  assumes Q_mono: \<open>mono Q\<close>
-  assumes rewritten: \<open>\<And>e. e > 0 \<Longrightarrow> Q (\<lambda>(x,y). dist x y < e)\<close>
-  shows \<open>Q P\<close>
-  using uni
-  apply (subst (asm) uniformity_dist)
-  apply (erule on_filter_baseE)
-     apply (auto intro!: rewritten simp: Q_mono)
-  subgoal for a b by (auto intro!: bexI[of _ \<open>min a b\<close>])
-  by -
 
 
 lemma plus_uniform_cont_metric:
