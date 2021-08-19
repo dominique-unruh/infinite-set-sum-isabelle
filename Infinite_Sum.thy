@@ -1718,21 +1718,87 @@ lemma sum_leq_infsetsum_complex:
   shows "sum f M \<le> infsum f N"
   by (metis assms infsetsum_subset_complex infsum_finite)
 
-lemma infsetsum_cmult_left': (* TODO: reduce sort *)
-  fixes f :: "'a \<Rightarrow> 'b :: {banach, real_normed_algebra, second_countable_topology, division_ring}"
-  shows  "infsum (\<lambda>x. f x * c) A = infsum f A * c"
-  by -
+lemma infsetsum_cmult_left:
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
+  assumes \<open>c \<noteq> 0 \<Longrightarrow> infsum_exists f A\<close>
+  shows "infsum (\<lambda>x. f x * c) A = infsum f A * c"
+proof (cases \<open>c=0\<close>)
+  case True
+  then show ?thesis by auto
+next
+  case False
+  with assms have \<open>infsum_exists f A\<close>
+    by simp
+  then have \<open>(sum f \<longlongrightarrow> infsum f A) (finite_subsets_at_top A)\<close>
+    using infsum_tendsto by blast
+  then have \<open>((\<lambda>F. sum f F * c) \<longlongrightarrow> infsum f A * c) (finite_subsets_at_top A)\<close>
+    by (simp add: tendsto_mult_right)
+  then have \<open>(sum (\<lambda>x. f x * c) \<longlongrightarrow> infsum f A * c) (finite_subsets_at_top A)\<close>
+    apply (rule tendsto_cong[THEN iffD1, rotated])
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    using sum_distrib_right by blast
+  then show \<open>infsum (\<lambda>x. f x * c) A = infsum f A * c\<close>
+    by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
+qed
 
-lemma abs_summable_on_zero_diff:
-  assumes "infsum_exists f A"
-  and "\<And>x. x \<in> B - A \<Longrightarrow> f x = 0"
-  shows "infsum_exists f B"
-  by -
+lemma infsetsum_exists_cmult_left:
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
+  assumes \<open>infsum_exists f A\<close>
+  shows "infsum_exists (\<lambda>x. f x * c) A"
+proof -
+  from assms have \<open>(sum f \<longlongrightarrow> infsum f A) (finite_subsets_at_top A)\<close>
+    using infsum_tendsto by blast
+  then have \<open>((\<lambda>F. sum f F * c) \<longlongrightarrow> infsum f A * c) (finite_subsets_at_top A)\<close>
+    by (simp add: tendsto_mult_right)
+  then have \<open>(sum (\<lambda>x. f x * c) \<longlongrightarrow> infsum f A * c) (finite_subsets_at_top A)\<close>
+    apply (rule tendsto_cong[THEN iffD1, rotated])
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    using sum_distrib_right by blast
+  then show ?thesis
+    by (metis infsum_exists_def)
+qed
 
-lemma abs_summable_on_Sigma_iff:
-  "f abs_summable_on Sigma A B \<longleftrightarrow>
-             (\<forall>x\<in>A. (\<lambda>y. f (x, y)) abs_summable_on B x) \<and>
-             ((\<lambda>x. infsetsum (\<lambda>y. norm (f (x, y))) (B x)) abs_summable_on A)"
+lemma infsetsum_exists_cmult_left':
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
+  assumes \<open>c \<noteq> 0\<close>
+  shows "infsum_exists (\<lambda>x. f x * c) A \<longleftrightarrow> infsum_exists f A"
+proof
+  assume \<open>infsum_exists f A\<close>
+  then show \<open>infsum_exists (\<lambda>x. f x * c) A\<close>
+    by (rule infsetsum_exists_cmult_left)
+next
+  assume \<open>infsum_exists (\<lambda>x. f x * c) A\<close>
+  then have \<open>infsum_exists (\<lambda>x. f x * c * inverse c) A\<close>
+    by (rule infsetsum_exists_cmult_left)
+  then show \<open>infsum_exists f A\<close>
+    by (metis (no_types, lifting) \<open>infsum_exists (\<lambda>x. f x * c * inverse c) A\<close> assms infsum_exists_cong 
+        mult.assoc mult.right_neutral right_inverse)
+qed
+
+lemma infsetsum_cmult_left':
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
+  shows "infsum (\<lambda>x. f x * c) A = infsum f A * c"
+proof (cases \<open>c \<noteq> 0 \<longrightarrow> infsum_exists f A\<close>)
+  case True
+  then show ?thesis
+    apply (rule_tac infsetsum_cmult_left) by auto
+next
+  case False
+  note asm = False
+  then show ?thesis
+  proof (cases \<open>c=0\<close>)
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    with asm have nex: \<open>\<not> infsum_exists f A\<close>
+      by simp
+    moreover have nex': \<open>\<not> infsum_exists (\<lambda>x. f x * c) A\<close>
+      using asm False apply (subst infsetsum_exists_cmult_left') by auto
+    ultimately show ?thesis
+      unfolding infsum_def by simp
+  qed
+qed
 
 end
 
