@@ -127,32 +127,11 @@ lemma infsum_cong:
   shows "infsum f A = infsum g A"
   by (metis Diff_cancel assms empty_iff inf.idem infsum_neutral_cong)
 
-(* lemma ennreal_Sup:
-  assumes "bdd_above A" and nonempty: "A\<noteq>{}"
-  shows "ennreal (Sup A) = Sup (ennreal ` A)"
-proof (rule Sup_eqI[symmetric])
-  fix y assume "y \<in> ennreal ` A" thus "y \<le> ennreal (Sup A)"
-    using assms cSup_upper ennreal_leI by auto
-next
-  fix y assume asm: "\<And>z. z \<in> ennreal ` A \<Longrightarrow> z \<le> y"
-  show "ennreal (Sup A) \<le> y"
-  proof (cases y)
-    case (real r)
-    show ?thesis      
-      by (metis assms(1) cSup_le_iff ennreal_leI real(1) real(2) asm Sup_least bdd_above_top 
-          cSUP_le_iff ennreal_le_iff nonempty)
-  next
-    case top
-    thus ?thesis by auto
-  qed
-qed *)
-
-
 lemma infsum_exists_cofin_subset:
   fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add,t2_space}"
   assumes "infsum_exists f A" and [simp]: "finite F"
   shows "infsum_exists f (A-F)"
-proof-
+proof -
   from assms(1) obtain x where lim_f: "(sum f \<longlongrightarrow> x) (finite_subsets_at_top A)"
     unfolding infsum_exists_def by auto
   define F' where "F' = F\<inter>A"
@@ -200,93 +179,6 @@ proof-
     unfolding infsum_exists_def by auto
 qed
 
-lemma 
-  fixes f :: "'a \<Rightarrow> 'b::{comm_monoid_add,t2_space}"
-  assumes "\<And>x. x\<in>(A-B)\<union>(B-A) \<Longrightarrow> f x = 0"
-  shows infsum_subset_zero: "infsum f A = infsum f B"
-    and infsum_exists_subset_zero: "infsum_exists f A = infsum_exists f B"
-proof -
-  have convB: "infsum_exists f B" and eq: "infsum f A = infsum f B"
-    if convA: "infsum_exists f A" and f0: "\<And>x. x\<in>(A-B)\<union>(B-A) \<Longrightarrow> f x = 0" for A B
-  proof -
-    define D where "D = (A-B)"
-    define D' where "D' = B-A"
-
-    from convA obtain x where limA: "(sum f \<longlongrightarrow> x) (finite_subsets_at_top A)"
-      using infsum_exists_def by blast
-    have "sum f X = sum f (X - D)"
-      if "finite (X::'a set)"
-        and "X \<subseteq> A"
-      for X :: "'a set"
-      using that f0 D_def by (simp add: subset_iff sum.mono_neutral_cong_right)
-    hence "\<forall>\<^sub>F x in finite_subsets_at_top A. sum f x = sum f (x - D)"
-      by (rule eventually_finite_subsets_at_top_weakI)
-    hence "((\<lambda>F. sum f (F-D)) \<longlongrightarrow> x) (finite_subsets_at_top A)"
-      using tendsto_cong [THEN iffD1, rotated] limA by fastforce
-    hence "(sum f \<longlongrightarrow> x) (filtermap (\<lambda>F. F-D) (finite_subsets_at_top A))"
-      by (simp add: filterlim_filtermap)
-    have "D \<subseteq> A"
-      unfolding D_def by simp
-    hence "finite_subsets_at_top (A - D) \<le> filtermap (\<lambda>F. F - D) (finite_subsets_at_top A)"
-      by (rule finite_subsets_at_top_minus)
-    hence "(sum f \<longlongrightarrow> x) (finite_subsets_at_top (A-D))"
-      using tendsto_mono [rotated] 
-        \<open>(sum f \<longlongrightarrow> x) (filtermap (\<lambda>F. F - D) (finite_subsets_at_top A))\<close>
-      by blast
-    have "A - D \<subseteq> B"
-      unfolding D_def by auto
-    hence "filtermap (\<lambda>F. F \<inter> (A - D)) (finite_subsets_at_top B) \<le> finite_subsets_at_top (A - D)"
-      by (rule finite_subsets_at_top_inter [where B = B and A = "A-D"])
-    hence "(sum f \<longlongrightarrow> x) (filtermap (\<lambda>F. F \<inter> (A - D)) (finite_subsets_at_top B))"
-      using tendsto_mono [rotated] \<open>(sum f \<longlongrightarrow> x) (finite_subsets_at_top (A - D))\<close> by blast
-    hence "((\<lambda>F. sum f (F \<inter> (A - D))) \<longlongrightarrow> x) (finite_subsets_at_top B)"
-      by (simp add: filterlim_filtermap)
-    have "sum f (X \<inter> (A - D)) = sum f X"
-      if "finite (X::'a set)"
-        and "X \<subseteq> B"
-      for X :: "'a set"
-    proof (rule sum.mono_neutral_cong)
-      show "finite X"
-        by (simp add: that(1))
-      show "finite (X \<inter> (A - D))"
-        by (simp add: that(1))
-      show "f i = 0"
-        if "i \<in> X - X \<inter> (A - D)"
-        for i :: 'a
-        using that D_def DiffD2 \<open>X \<subseteq> B\<close> f0 by auto 
-      show "f i = 0"
-        if "i \<in> X \<inter> (A - D) - X"
-        for i :: 'a
-        using that
-        by auto 
-      show "f x = f x"
-        if "x \<in> X \<inter> (A - D) \<inter> X"
-        for x :: 'a
-        by simp
-    qed
-    hence "\<forall>\<^sub>F x in finite_subsets_at_top B. sum f (x \<inter> (A - D)) = sum f x"
-      by (rule eventually_finite_subsets_at_top_weakI)      
-    hence limB: "(sum f \<longlongrightarrow> x) (finite_subsets_at_top B)"
-      using tendsto_cong [THEN iffD1 , rotated]
-        \<open>((\<lambda>F. sum f (F \<inter> (A - D))) \<longlongrightarrow> x) (finite_subsets_at_top B)\<close> by blast
-    thus "infsum_exists f B"
-      unfolding infsum_exists_def by auto
-    have "Lim (finite_subsets_at_top A) (sum f) = Lim (finite_subsets_at_top B) (sum f)"
-      if "infsum_exists f B"
-      using that    using limA limB
-      using finite_subsets_at_top_neq_bot tendsto_Lim by blast
-    thus "infsum f A = infsum f B"
-      unfolding infsum_def 
-      using convA
-      by (simp add: \<open>infsum_exists f B\<close>)
-  qed
-  with assms show "infsum_exists f A = infsum_exists f B"
-    by (metis Un_commute)
-  thus "infsum f A = infsum f B"
-    using assms convB eq
-    by (metis infsum_def)
-qed
-
 lemma
   fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add,t2_space}"
   assumes "infsum_exists f B" and "infsum_exists f A" and AB: "A \<subseteq> B"
@@ -331,61 +223,50 @@ proof -
     unfolding infsum_def by (simp add: tendsto_Lim) 
 qed
 
-lemma infsum_mono_set:
+lemma infsum_mono_neutral:
   fixes f :: "'a\<Rightarrow>'b::{ordered_comm_monoid_add,linorder_topology}"
-  assumes fx0: "\<And>x. x\<in>B-A \<Longrightarrow> f x \<ge> 0"
-    and "A \<subseteq> B"
-    and "infsum_exists f A" (* See infsum_exists_set_mono for why this assumption is needed. *)
-    and "infsum_exists f B"
-  shows "infsum f B \<ge> infsum f A"
+  assumes [simp]: "infsum_exists f A"
+    and [simp]: "infsum_exists g B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "infsum f A \<le> infsum g B"
 proof -
-  define limA limB f' where "limA = infsum f A" and "limB = infsum f B"
-    and "f' x = (if x \<in> A then f x else 0)" for x
-  have "infsum f A = infsum f' B"
-  proof (subst infsum_subset_zero [where f = f' and B = A])
-    show "f' x = 0"
-      if "x \<in> B - A \<union> (A - B)"
-      for x :: 'a
-      using that assms(2) f'_def by auto 
-    show "infsum f A = infsum f' A"
-      by (metis f'_def infsum_cong)      
-  qed
-  hence limA_def': "limA = infsum f' B"
-    unfolding limA_def
-    by auto
-  have convA': "infsum_exists f' B"
-  proof (rule infsum_exists_subset_zero [THEN iffD1 , where A1 = A])
-    show "f' x = 0"
-      if "x \<in> A - B \<union> (B - A)"
-      for x :: 'a
-      using that assms(2) f'_def by auto 
-    show "infsum_exists f' A"
-      by (simp add: assms(3) f'_def infsum_exists_cong)      
-  qed
-  from assms have limA: "(sum f \<longlongrightarrow> limA) (finite_subsets_at_top A)" 
-    and limB: "(sum f \<longlongrightarrow> limB) (finite_subsets_at_top B)"
-    by (auto simp: limA_def limB_def infsum_exists_def infsum_def tendsto_Lim)
-  have limA': "(sum f' \<longlongrightarrow> limA) (finite_subsets_at_top B)"
-    using finite_subsets_at_top_neq_bot tendsto_Lim convA'
-    unfolding limA_def' infsum_def  infsum_exists_def
-    by fastforce 
-  have "f' i \<le> f i"
-    if "i \<in> X" and "X \<subseteq> B"
-    for i :: 'a and X
-    unfolding f'_def using fx0 that
-    using \<open>X \<subseteq> B\<close> by auto
-  hence "sum f' X \<le> sum f X"
-    if "finite (X::'a set)"
-      and "X \<subseteq> B"
-    for X :: "'a set"
-    using sum_mono
-    by (simp add: sum_mono that(2)) 
-  hence sumf'_leq_sumf: "\<forall>\<^sub>F x in finite_subsets_at_top B. sum f' x \<le> sum f x"
-    by (rule eventually_finite_subsets_at_top_weakI)
-  show "limA \<le> limB"
-    using finite_subsets_at_top_neq_bot limB limA' sumf'_leq_sumf 
-    by (rule tendsto_le)
+  define f' g' where \<open>f' x = (if x \<in> A then f x else 0)\<close> and \<open>g' x = (if x \<in> B then g x else 0)\<close> for x
+  have [simp]: \<open>infsum_exists f' (A\<union>B)\<close>
+    apply (rule infsum_exists_neutral_cong[where f=f and S=A, THEN iffD1])
+    by (auto simp: f'_def)
+  moreover have f'f: \<open>infsum f' (A\<union>B) = infsum f A\<close>
+    apply (rule infsum_neutral_cong[where g=f and T=A])
+    by (auto simp: f'_def)
+  ultimately have f'_lim: \<open>(sum f' \<longlongrightarrow> infsum f A) (finite_subsets_at_top (A\<union>B))\<close>
+    by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
+  have [simp]: \<open>infsum_exists g' (A\<union>B)\<close>
+    apply (rule_tac infsum_exists_neutral_cong[where f=g and S=B, THEN iffD1])
+    by (auto simp: g'_def)
+  moreover have g'g: \<open>infsum g' (A\<union>B) = infsum g B\<close>
+    apply (rule infsum_neutral_cong[where g=g and T=B])
+    by (auto simp: g'_def)
+  ultimately have g'_lim: \<open>(sum g' \<longlongrightarrow> infsum g B) (finite_subsets_at_top (A\<union>B))\<close>
+    by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
+
+  have *: \<open>\<forall>\<^sub>F x in finite_subsets_at_top (A \<union> B). sum f' x \<le> sum g' x\<close>
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    apply (rule sum_mono)
+    using assms by (auto simp: f'_def g'_def)
+  show ?thesis
+    apply (rule tendsto_le)
+    using * g'_lim f'_lim by auto
 qed
+
+lemma infsum_mono:
+  fixes f :: "'a\<Rightarrow>'b::{ordered_comm_monoid_add,linorder_topology}"
+  assumes "infsum_exists f A" and "infsum_exists g A"
+  assumes \<open>\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x\<close>
+  shows "infsum f A \<le> infsum g A"
+  apply (rule infsum_mono_neutral)
+  using assms by auto
+
 
 lemma infsum_exists_finite[simp]:
   assumes "finite F"
@@ -397,6 +278,8 @@ lemma infsum_finite[simp]:
   assumes "finite F"
   shows "infsum f F = sum f F"
   using assms by (auto intro: tendsto_Lim simp: finite_subsets_at_top_finite infsum_def principal_eq_bot_iff tendsto_principal_singleton)
+
+(* Rename from here TODO *)
 
 lemma infsum_approx_sum:
   fixes f :: "'a \<Rightarrow> 'b::{comm_monoid_add,metric_space}"
@@ -447,19 +330,8 @@ proof (cases "infsum_exists f A")
     also have "\<dots> \<le> (infsum (\<lambda>x. norm (f x)) A) + \<epsilon>"
     proof-
       have "infsum (\<lambda>x. norm (f x)) F \<le> infsum (\<lambda>x. norm (f x)) A"
-      proof (rule infsum_mono_set)
-        show "0 \<le> norm (f x)"
-          if "x \<in> A - F"
-          for x :: 'b
-          using that
-          by simp 
-        show "F \<subseteq> A"
-          by (simp add: \<open>F \<subseteq> A\<close>)          
-        show "infsum_exists (\<lambda>x. norm (f x)) F"
-          using \<open>finite F\<close> by auto         
-        show "infsum_exists (\<lambda>x. norm (f x)) A"
-          by (simp add: assms)          
-      qed
+        apply (rule infsum_mono_neutral)
+        using \<open>finite F\<close>  \<open>F \<subseteq> A\<close> assms by auto
       thus ?thesis
         by (simp_all flip: infsum_finite add: \<open>finite F\<close>)
     qed
@@ -577,13 +449,11 @@ proof -
   define fA fB where \<open>fA x = (if x \<in> A then f x else 0)\<close>
     and \<open>fB x = (if x \<notin> A then f x else 0)\<close> for x
   have conv_fA: \<open>infsum_exists fA (A \<union> B)\<close>
-    unfolding fA_def
-    apply (subst infsum_exists_subset_zero, auto)
-    by (simp add: assms(1) infsum_exists_cong)
+    apply (subst infsum_exists_neutral_cong[where T=A and g=f])
+    using \<open>infsum_exists f A\<close> by (auto simp: fA_def)
   have conv_fB: \<open>infsum_exists fB (A \<union> B)\<close>
-    unfolding fB_def
-    apply (subst infsum_exists_subset_zero, auto)
-    by (smt (verit, ccfv_SIG) assms(2) assms(3) disjoint_iff infsum_exists_cong)
+    apply (subst infsum_exists_neutral_cong[where T=B and g=f])
+    using \<open>infsum_exists f B\<close> disj by (auto simp: fB_def)
   have fAB: \<open>f x = fA x + fB x\<close> for x
     unfolding fA_def fB_def by simp
   have \<open>infsum f (A \<union> B) = infsum fA (A \<union> B) + infsum fB (A \<union> B)\<close>
@@ -591,7 +461,7 @@ proof -
     using conv_fA conv_fB by (rule infsum_add)
   also have \<open>\<dots> = infsum fA A + infsum fB B\<close>
     unfolding fA_def fB_def
-    by (subst infsum_subset_zero[where A=\<open>A\<union>B\<close>], auto)+
+    by (subst infsum_neutral_cong[where S=\<open>A\<union>B\<close>], auto)+
   also have \<open>\<dots> = infsum f A + infsum f B\<close>
     apply (subst infsum_cong[where f=fA and g=f], simp add: fA_def)
     apply (subst infsum_cong[where f=fB and g=f], simp add: fB_def)
@@ -622,9 +492,9 @@ qed
   Not sure if the condition "plus_cont" is required. *)
 
 lemma infsum_exists_set_mono:
-  fixes A B and f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,t2_space,uniform_space}\<close>
+  fixes A B and f :: \<open>'a \<Rightarrow> 'b::{ab_group_add,t2_space,uniform_space}\<close>
   assumes \<open>complete (UNIV :: 'b set)\<close>
-  assumes plus_cont: \<open>\<And>E::('b\<times>'b) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> \<exists>D. eventually D uniformity \<and> (\<forall>x y c. D (x+c, y+c) \<longrightarrow> E (x, y))\<close>
+  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'b,y). x+y)\<close>
   assumes \<open>infsum_exists f A\<close>
   assumes \<open>B \<subseteq> A\<close>
   shows \<open>infsum_exists f B\<close>
@@ -642,8 +512,12 @@ proof -
     fix E :: \<open>('b\<times>'b) \<Rightarrow> bool\<close> assume \<open>eventually E uniformity\<close>
     then obtain E' where \<open>eventually E' uniformity\<close> and E'E'E: \<open>E' (x, y) \<longrightarrow> E' (y, z) \<longrightarrow> E (x, z)\<close> for x y z
       using uniformity_trans by blast
-    obtain D where \<open>eventually D uniformity\<close> and DE: \<open>D (x + c, y + c) \<Longrightarrow> E' (x, y)\<close> for x y c
-      apply atomize_elim using \<open>eventually E' uniformity\<close> by (rule plus_cont)
+    from plus_cont[simplified uniformly_continuous2_def filterlim_def le_filter_def, rule_format, 
+                   OF \<open>eventually E' uniformity\<close>]
+    obtain D where \<open>eventually D uniformity\<close> and DE: \<open>D (x, y) \<Longrightarrow> E' (x+c, y+c)\<close> for x y c
+      apply atomize_elim
+      by (auto simp: case_prod_beta eventually_filtermap uniformity_prod_def 
+        eventually_prod_same uniformity_refl)
     with cauchy_fA have \<open>eventually D (?filter_fA \<times>\<^sub>F ?filter_fA)\<close>
       unfolding cauchy_filter_def le_filter_def by simp
     then obtain P1 P2 where ev_P1: \<open>eventually (\<lambda>F. P1 (sum f F)) ?filter_A\<close> and ev_P2: \<open>eventually (\<lambda>F. P2 (sum f F)) ?filter_A\<close>
@@ -670,7 +544,8 @@ proof -
       by (metis Diff_disjoint F0A_def \<open>finite F0A\<close> inf.absorb_iff1 inf_assoc inf_bot_right sum.union_disjoint)
     then have *: \<open>\<forall>F1 F2. F1\<supseteq>F0B \<and> F2\<supseteq>F0B \<and> finite F1 \<and> finite F2 \<and> F1\<subseteq>B \<and> F2\<subseteq>B \<longrightarrow> 
               E' (sum f F1, sum f F2)\<close>
-      by (auto intro!: DE[where c=\<open>sum f F0A\<close>])
+      using DE[where c=\<open>- sum f F0A\<close>]
+      apply auto by (metis add.commute add_diff_cancel_left')
     show \<open>eventually E (?filter_fB \<times>\<^sub>F ?filter_fB)\<close>
       apply (subst eventually_prod_filter)
       apply (rule exI[of _ \<open>\<lambda>x. E' (x, sum f F0B)\<close>])
@@ -692,7 +567,7 @@ proof -
     by (auto simp: infsum_exists_def)
 qed
 
-lemma infsum_exists_set_mono_metric:
+(* lemma infsum_exists_set_mono_metric:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,complete_space}\<close>
   assumes \<open>\<And>e. e > 0 \<Longrightarrow> \<exists>d>0. (\<forall>x y c :: 'b. dist (x+c) (y+c) < d \<longrightarrow> dist x y < e)\<close>
   assumes \<open>infsum_exists f A\<close>
@@ -715,15 +590,16 @@ proof -
   show ?thesis
     using \<open>complete (UNIV::'b set)\<close>  cont \<open>infsum_exists f A\<close> \<open>B \<subseteq> A\<close> 
     by (rule infsum_exists_set_mono[where A=A])
-qed
+qed *)
 
 lemma infsum_exists_set_mono_banach:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::{comm_monoid_add,banach}\<close>
   assumes \<open>infsum_exists f A\<close>
   assumes \<open>B \<subseteq> A\<close>
   shows \<open>infsum_exists f B\<close>
-  apply (rule infsum_exists_set_mono_metric)
-  using assms by auto
+  apply (rule infsum_exists_set_mono)
+  using assms apply auto
+  by (metis Cauchy_convergent UNIV_I complete_def convergent_def)
 
 lemma infsum_exists_union_disjoint:
   fixes f :: "'a \<Rightarrow> 'b::{topological_monoid_add, t2_space, comm_monoid_add}"
@@ -757,22 +633,6 @@ next
     by auto
   finally show ?case
     by -
-qed
-
-theorem infsum_mono:
-  fixes f g :: "'a\<Rightarrow>'b::{ordered_comm_monoid_add,linorder_topology}" (* Does it also hold in order_topology? *)
-  assumes "infsum_exists f A"
-    and "infsum_exists g A"
-  assumes leq: "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
-  shows "infsum f A \<le> infsum g A"
-proof -
-  note limf = infsum_tendsto[OF assms(1)]
-    and limg = infsum_tendsto[OF assms(2)]
-  have sum_leq: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> A \<Longrightarrow> sum f F \<le> sum g F\<close>
-    by (simp add: in_mono leq sum_mono)
-  show ?thesis
-    using _ limg limf apply (rule tendsto_le)
-    by (auto intro!: sum_leq)
 qed
 
 lemma 
@@ -986,12 +846,14 @@ proof -
     using assms * by auto
 qed *)
 
+(* TODO: Replace by mono_neutral style theorem *)
 lemma infsetsum_subset_complex:
   fixes f :: "'a \<Rightarrow> complex"
   assumes "infsum_exists f B" and "A \<subseteq> B" and pos: "\<And>x. x \<in> B - A \<Longrightarrow> f x \<ge> 0"
   shows "infsum f A \<le> infsum f B"
     \<comment> \<open>Existence of \<^term>\<open>infsum f A\<close> follows from @{thm infsum_exists_set_mono_banach}\<close>
-proof -
+  sorry
+(* proof -
   have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (f x)) B\<close>
     apply (rule infsum_mono_set)
     using assms infsum_exists_Re apply auto
@@ -1005,7 +867,7 @@ proof -
     by (metis assms(1) assms(2) infsum_Im infsum_exists_set_mono_banach)
   from Re Im show ?thesis
     by auto
-qed
+qed *)
 
 lemma
   fixes f :: \<open>'a \<Rightarrow> 'b :: {conditionally_complete_linorder, ordered_comm_monoid_add, linorder_topology}\<close>
@@ -1149,8 +1011,7 @@ proof -
 qed
 
 lemma sum_uniformity:
-  (* TODO: replace by simpler equivalent condition (one-sided uniform continuity but D independent of choice of added constant *)
-  assumes plus_cont: \<open>\<And>E::('b\<times>'b::{uniform_space,comm_monoid_add}) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
+  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'b::{uniform_space,comm_monoid_add},y). x+y)\<close>
   assumes \<open>eventually E uniformity\<close>
   obtains D where \<open>eventually D uniformity\<close> 
     and \<open>\<And>M::'a set. \<And>f f' :: 'a \<Rightarrow> 'b. card M \<le> n \<and> (\<forall>m\<in>M. D (f m, f' m)) \<Longrightarrow> E (sum f M, sum f' M)\<close>
@@ -1161,10 +1022,11 @@ proof (atomize_elim, insert \<open>eventually E uniformity\<close>, induction n 
 next
   case (Suc n)
   
-  from plus_cont[OF Suc.prems]
+  from plus_cont[unfolded uniformly_continuous2_def filterlim_def le_filter_def, rule_format, OF Suc.prems]
   obtain D1 D2 where \<open>eventually D1 uniformity\<close> and \<open>eventually D2 uniformity\<close> 
     and D1D2E: \<open>D1 (x, y) \<Longrightarrow> D2 (x', y') \<Longrightarrow> E (x + x', y + y')\<close> for x y x' y'
-    apply atomize_elim unfolding eventually_prod_filter by auto
+    apply atomize_elim
+    by (auto simp: eventually_prod_filter case_prod_beta uniformity_prod_def eventually_filtermap)
 
   from Suc.IH[OF \<open>eventually D2 uniformity\<close>]
   obtain D3 where \<open>eventually D3 uniformity\<close> and D3: \<open>card M \<le> n \<Longrightarrow> (\<forall>m\<in>M. D3 (f m, f' m)) \<Longrightarrow> D2 (sum f M, sum f' M)\<close> 
@@ -1212,47 +1074,13 @@ next
 qed
 
 
-lemma plus_uniform_cont_metric:
-  fixes E :: \<open>('a\<times>'a::{metric_space,plus}) \<Rightarrow> bool\<close>
-  assumes \<open>\<forall>e>0. \<exists>d>0. \<forall>x y x' y' :: 'a. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x+x') (y+y') < e\<close>
-  assumes \<open>eventually E uniformity\<close>
-  shows \<open>eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
-proof -
-  have \<open>\<forall>\<^sub>F ((x::'a,y),(x',y')) in uniformity \<times>\<^sub>F uniformity. dist (x+x') (y+y') < e\<close> if \<open>e > 0\<close> for e
-  proof -
-    obtain d where \<open>d > 0\<close> and d: \<open>dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x+x') (y+y') < e\<close> for x y x' y' :: 'a
-      using assms(1) \<open>0 < e\<close> by blast
-    have \<open>\<forall>\<^sub>F ((x,y),(x',y')) in uniformity \<times>\<^sub>F uniformity. dist x y < d \<and> dist x' y' < d\<close>
-      unfolding case_prod_unfold apply (rule eventually_prodI)
-      using eventually_uniformity_metric \<open>d > 0\<close> by force+
-    then show ?thesis
-      apply (rule eventually_mono)
-      using d by auto
-  qed
-  then show ?thesis
-    apply (rule_tac on_filter_base_uniformity_distE[OF \<open>eventually E uniformity\<close>])
-    by (auto simp: eventually_mono mono_def le_fun_def case_prod_unfold)
-qed
-
-lemma plus_uniform_cont_norm:
-  fixes E :: \<open>('a\<times>'a::{real_normed_vector}) \<Rightarrow> bool\<close>
-  assumes \<open>eventually E uniformity\<close>
-  shows \<open>eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
-proof (rule plus_uniform_cont_metric; intro allI impI assms)
-  fix e :: real assume \<open>0 < e\<close>
-  show \<open>\<exists>d>0. \<forall>x y x' y' :: 'a. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x + x') (y + y') < e\<close>
-    apply (rule exI[of _ \<open>e/2\<close>])
-    using \<open>0 < e\<close> apply auto
-    by (smt (verit, ccfv_SIG) dist_add_cancel dist_add_cancel2 dist_commute dist_triangle_lt)
-qed
-
 (* TODO: align which Sigma-lemmas have a prime with sum.Sigma (it's opposite from what we have).
 Maybe even drop the variants where f :: a*b\<Rightarrow>c? *)
 
 lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,uniform_space}\<close>
-  assumes plus_cont: \<open>\<And>E::('c\<times>'c) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
+  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
   assumes summableAB: "infsum_exists f (Sigma A B)"
   assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
   shows infsetsum_Sigma: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
@@ -1364,31 +1192,19 @@ qed
 
 lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-    and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,metric_space}\<close>
-  assumes \<open>\<forall>e>0. \<exists>d>0. \<forall>x y x' y' :: 'c. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x+x') (y+y') < e\<close>
-  assumes "infsum_exists f (Sigma A B)"
-  assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
-  shows infsetsum_Sigma_metric: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
-    and infsetsum_Sigma_metric_exists: "infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
-  subgoal apply (rule infsetsum_Sigma) using assms by (auto simp add: plus_uniform_cont_metric)
-  subgoal apply (rule infsetsum_Sigma_exists) using assms by (auto simp add: plus_uniform_cont_metric)
-  by -
-
-lemma
-  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{real_normed_vector}\<close>
   assumes "infsum_exists f (Sigma A B)"
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
   shows infsetsum_Sigma_normed: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
     and infsetsum_Sigma_normed_exists: "infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
-  subgoal apply (rule infsetsum_Sigma) using assms by (auto simp add: plus_uniform_cont_norm)
-  subgoal apply (rule infsetsum_Sigma_exists) using assms by (auto simp add: plus_uniform_cont_norm)
+  subgoal apply (rule infsetsum_Sigma) using assms by auto
+  subgoal apply (rule infsetsum_Sigma_exists) using assms by auto
   by -
 
 lemma 
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,uniform_space}\<close>
-  assumes plus_cont: \<open>\<And>E::('c\<times>'c) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
+  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
   assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
   shows infsetsum_Sigma': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
@@ -1398,25 +1214,13 @@ lemma
 
 lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
-    and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,metric_space}\<close>
-  assumes \<open>\<forall>e>0. \<exists>d>0. \<forall>x y x' y' :: 'c. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (x+x') (y+y') < e\<close>
-  assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
-  assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
-  shows infsetsum_Sigma_metric': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
-    and infsetsum_Sigma_metric_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
-  subgoal apply (rule infsetsum_Sigma') using assms by (auto simp add: plus_uniform_cont_metric)
-  subgoal apply (rule infsetsum_Sigma_exists') using assms by (auto simp add: plus_uniform_cont_metric)
-  by -
-
-lemma
-  fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{real_normed_vector}\<close>
   assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
   shows infsetsum_Sigma_norm': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
     and infsetsum_Sigma_norm_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
-  subgoal apply (rule infsetsum_Sigma') using assms by (auto simp add: plus_uniform_cont_norm)
-  apply (rule infsetsum_Sigma_exists') using assms by (auto simp add: plus_uniform_cont_norm)
+  subgoal apply (rule infsetsum_Sigma') using assms by auto
+  apply (rule infsetsum_Sigma_exists') using assms by auto
 
 (* TODO: remove _Times variants also in Infsetsum.thy *)
 
@@ -1441,7 +1245,8 @@ qed
 lemma infsum_swap:
   fixes A :: "'a set" and B :: "'b set"
   fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,uniform_space}"
-  assumes plus_cont: \<open>\<And>E::('c\<times>'c) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
+  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
+  (* assumes plus_cont: \<open>\<And>E::('c\<times>'c) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close> *)
   assumes \<open>infsum_exists (\<lambda>(x, y). f x y) (A \<times> B)\<close>
   assumes \<open>\<And>a. a\<in>A \<Longrightarrow> infsum_exists (f a) B\<close>
   assumes \<open>\<And>b. b\<in>B \<Longrightarrow> infsum_exists (\<lambda>a. f a b) A\<close>
@@ -1585,6 +1390,7 @@ proof -
     by (simp add: complex_eqI)
 qed
 
+(* TODO keep? generalize? what does infsetsum have? In principle, infsum=sum is enough *)
 lemma sum_leq_infsetsum:
   fixes f :: "'a \<Rightarrow> 'b::{ordered_comm_monoid_add,linorder_topology}"
   assumes "infsum_exists f N"
@@ -1592,8 +1398,9 @@ lemma sum_leq_infsetsum:
   and "M \<subseteq> N"
   and "\<And>x. x\<in>N-M \<Longrightarrow> f x \<ge> 0"
   shows "sum f M \<le> infsum f N"
-  by (metis assms infsum_exists_finite infsum_finite infsum_mono_set)
+  by (smt (verit, best) Diff_iff assms(1) assms(2) assms(3) assms(4) dual_order.eq_iff infsum_exists_finite infsum_finite infsum_mono_neutral subset_eq)
 
+(* TODO keep? generalize? what does infsetsum have? In principle, infsum=sum is enough *)
 lemma sum_leq_infsetsum_complex:
   fixes f :: "'a \<Rightarrow> complex"
   assumes "infsum_exists f N"
@@ -1626,6 +1433,29 @@ next
     by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
 qed
 
+lemma infsetsum_cmult_right:
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
+  assumes \<open>c \<noteq> 0 \<Longrightarrow> infsum_exists f A\<close>
+  shows "infsum (\<lambda>x. c * f x) A = c * infsum f A"
+proof (cases \<open>c=0\<close>)
+  case True
+  then show ?thesis by auto
+next
+  case False
+  with assms have \<open>infsum_exists f A\<close>
+    by simp
+  then have \<open>(sum f \<longlongrightarrow> infsum f A) (finite_subsets_at_top A)\<close>
+    using infsum_tendsto by blast
+  then have \<open>((\<lambda>F. c * sum f F) \<longlongrightarrow> c * infsum f A) (finite_subsets_at_top A)\<close>
+    by (simp add: tendsto_mult_left)
+  then have \<open>(sum (\<lambda>x. c * f x) \<longlongrightarrow> c * infsum f A) (finite_subsets_at_top A)\<close>
+    apply (rule tendsto_cong[THEN iffD1, rotated])
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    using sum_distrib_left by blast
+  then show \<open>infsum (\<lambda>x. c * f x) A = c * infsum f A\<close>
+    by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
+qed
+
 lemma infsetsum_exists_cmult_left:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
   assumes \<open>infsum_exists f A\<close>
@@ -1643,6 +1473,23 @@ proof -
     by (metis infsum_exists_def)
 qed
 
+lemma infsetsum_exists_cmult_right:
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
+  assumes \<open>infsum_exists f A\<close>
+  shows "infsum_exists (\<lambda>x. c * f x) A"
+proof -
+  from assms have \<open>(sum f \<longlongrightarrow> infsum f A) (finite_subsets_at_top A)\<close>
+    using infsum_tendsto by blast
+  then have \<open>((\<lambda>F. c * sum f F) \<longlongrightarrow> c * infsum f A) (finite_subsets_at_top A)\<close>
+    by (simp add: tendsto_mult_left)
+  then have \<open>(sum (\<lambda>x. c * f x) \<longlongrightarrow> c * infsum f A) (finite_subsets_at_top A)\<close>
+    apply (rule tendsto_cong[THEN iffD1, rotated])
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    using sum_distrib_left by blast
+  then show ?thesis
+    by (metis infsum_exists_def)
+qed
+
 lemma infsetsum_exists_cmult_left':
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
   assumes \<open>c \<noteq> 0\<close>
@@ -1656,8 +1503,23 @@ next
   then have \<open>infsum_exists (\<lambda>x. f x * c * inverse c) A\<close>
     by (rule infsetsum_exists_cmult_left)
   then show \<open>infsum_exists f A\<close>
-    by (metis (no_types, lifting) \<open>infsum_exists (\<lambda>x. f x * c * inverse c) A\<close> assms infsum_exists_cong 
-        mult.assoc mult.right_neutral right_inverse)
+    by (metis (no_types, lifting) assms infsum_exists_cong mult.assoc mult.right_neutral right_inverse)
+qed
+
+lemma infsetsum_exists_cmult_right':
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
+  assumes \<open>c \<noteq> 0\<close>
+  shows "infsum_exists (\<lambda>x. c * f x) A \<longleftrightarrow> infsum_exists f A"
+proof
+  assume \<open>infsum_exists f A\<close>
+  then show \<open>infsum_exists (\<lambda>x. c * f x) A\<close>
+    by (rule infsetsum_exists_cmult_right)
+next
+  assume \<open>infsum_exists (\<lambda>x. c * f x) A\<close>
+  then have \<open>infsum_exists (\<lambda>x. inverse c * (c * f x)) A\<close>
+    by (rule infsetsum_exists_cmult_right)
+  then show \<open>infsum_exists f A\<close>
+    by (metis (no_types, lifting) assms infsum_exists_cong left_inverse mult.assoc mult.left_neutral)
 qed
 
 lemma infsetsum_cmult_left':
@@ -1680,6 +1542,31 @@ next
       by simp
     moreover have nex': \<open>\<not> infsum_exists (\<lambda>x. f x * c) A\<close>
       using asm False apply (subst infsetsum_exists_cmult_left') by auto
+    ultimately show ?thesis
+      unfolding infsum_def by simp
+  qed
+qed
+
+lemma infsetsum_cmult_right':
+  fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
+  shows "infsum (\<lambda>x. c * f x) A = c * infsum f A"
+proof (cases \<open>c \<noteq> 0 \<longrightarrow> infsum_exists f A\<close>)
+  case True
+  then show ?thesis
+    apply (rule_tac infsetsum_cmult_right) by auto
+next
+  case False
+  note asm = False
+  then show ?thesis
+  proof (cases \<open>c=0\<close>)
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    with asm have nex: \<open>\<not> infsum_exists f A\<close>
+      by simp
+    moreover have nex': \<open>\<not> infsum_exists (\<lambda>x. c * f x) A\<close>
+      using asm False apply (subst infsetsum_exists_cmult_right') by auto
     ultimately show ?thesis
       unfolding infsum_def by simp
   qed
