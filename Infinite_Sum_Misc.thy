@@ -1,5 +1,7 @@
 theory Infinite_Sum_Misc
-  imports HOL.Real_Vector_Spaces HOL.Limits
+  imports 
+    "HOL-Library.Extended_Nonnegative_Real"
+    "HOL-Analysis.Elementary_Topology"
 begin
 
 
@@ -120,5 +122,94 @@ qed
 lemma tendsto_principal_singleton:
   shows "(f \<longlongrightarrow> f x) (principal {x})"
   unfolding tendsto_def eventually_principal by simp
+
+lemma isCont_ennreal[simp]: \<open>isCont ennreal x\<close>
+  apply (rule continuous_at_sequentiallyI)
+  by simp
+
+lemma tendsto_iff_uniformity:
+  fixes l :: \<open>'b :: uniform_space\<close>
+  shows \<open>(f \<longlongrightarrow> l) F \<longleftrightarrow> (\<forall>E. eventually E uniformity \<longrightarrow> (\<forall>\<^sub>F x in F. E (f x, l)))\<close>
+proof (intro iffI allI impI)
+  fix E :: \<open>('b \<times> 'b) \<Rightarrow> bool\<close>
+  assume \<open>(f \<longlongrightarrow> l) F\<close> and \<open>eventually E uniformity\<close>
+  from \<open>eventually E uniformity\<close>
+  have \<open>eventually (\<lambda>(x, y). E (y, x)) uniformity\<close>
+    by (simp add: uniformity_sym)
+  then have \<open>\<forall>\<^sub>F (y, x) in uniformity. y = l \<longrightarrow> E (x, y)\<close>
+    using eventually_mono by fastforce
+  with \<open>(f \<longlongrightarrow> l) F\<close> have \<open>eventually (\<lambda>x. E (x ,l)) (filtermap f F)\<close>
+    by (simp add: filterlim_def le_filter_def eventually_nhds_uniformity)
+  then show \<open>\<forall>\<^sub>F x in F. E (f x, l)\<close>
+    by (simp add: eventually_filtermap)
+next
+  assume assm: \<open>\<forall>E. eventually E uniformity \<longrightarrow> (\<forall>\<^sub>F x in F. E (f x, l))\<close>
+  have \<open>eventually P (filtermap f F)\<close> if \<open>\<forall>\<^sub>F (x, y) in uniformity. x = l \<longrightarrow> P y\<close> for P
+  proof -
+    from that have \<open>\<forall>\<^sub>F (y, x) in uniformity. x = l \<longrightarrow> P y\<close> 
+      using uniformity_sym[where E=\<open>\<lambda>(x,y). x=l \<longrightarrow> P y\<close>] by auto
+    with assm have \<open>\<forall>\<^sub>F x in F. P (f x)\<close>
+      by auto
+    then show ?thesis
+      by (auto simp: eventually_filtermap)
+  qed
+  then show \<open>(f \<longlongrightarrow> l) F\<close>
+    by (simp add: filterlim_def le_filter_def eventually_nhds_uniformity)
+qed
+
+
+lemma \<open>(INF e\<in>{0 <..}. principal {(x, y). dist x y < e}) = 
+       (filtermap (\<lambda>((x1,x2),(y1,y2)). ((x1,y1),(x2,y2))) (uniformity \<times>\<^sub>F uniformity))\<close>
+proof (subst filter_eq_iff, intro allI iffI)
+  fix P :: \<open>('a \<times> 'b) \<times> ('a \<times> 'b) \<Rightarrow> bool\<close>
+
+  have 1: \<open>\<exists>e\<in>{0<..}.
+              {(x,y). dist x y < e} \<subseteq> {(x,y). dist x y < a} \<and>
+              {(x,y). dist x y < e} \<subseteq> {(x,y). dist x y < b}\<close> if \<open>a>0\<close> \<open>b>0\<close> for a b
+    apply (rule bexI[of _ \<open>min a b\<close>])
+    using that by auto
+  have 2: \<open>mono (\<lambda>P. eventually (\<lambda>x. P (Q x)) F)\<close> for F :: \<open>'z filter\<close> and Q :: \<open>'z \<Rightarrow> 'y\<close>
+    unfolding mono_def using eventually_mono le_funD by fastforce
+  have \<open>\<forall>\<^sub>F ((x1::'a,y1),(x2::'b,y2)) in uniformity \<times>\<^sub>F uniformity. dist x1 y1 < e/2 \<and> dist x2 y2 < e/2\<close> if \<open>e>0\<close> for e
+    by (auto intro!: eventually_prodI exI[of _ \<open>e/2\<close>] simp: case_prod_unfold eventually_uniformity_metric that)
+  then have 3: \<open>\<forall>\<^sub>F ((x1::'a,y1),(x2::'b,y2)) in uniformity \<times>\<^sub>F uniformity. dist (x1,x2) (y1,y2) < e\<close> if \<open>e>0\<close> for e
+    apply (rule eventually_rev_mp)
+    by (auto intro!: that eventuallyI simp: case_prod_unfold dist_Pair_Pair sqrt_sum_squares_half_less)
+  show \<open>eventually P (INF e\<in>{0<..}. principal {(x, y). dist x y < e}) \<Longrightarrow> 
+        eventually P (filtermap (\<lambda>((x1,x2),(y1,y2)). ((x1,y1),(x2,y2))) (uniformity \<times>\<^sub>F uniformity))\<close>
+    apply (erule on_filter_baseE)
+    using 1 3 by (auto simp: case_prod_unfold eventually_filtermap 2)
+next
+  fix P :: \<open>('a \<times> 'b) \<times> ('a \<times> 'b) \<Rightarrow> bool\<close>
+  assume \<open>eventually P (filtermap (\<lambda>((x1, x2), y1, y2). ((x1, y1), x2, y2)) (uniformity \<times>\<^sub>F uniformity))\<close>
+  then have obtain P1 P2 where \<open>eventually P1 uniformity\<close> \<open>eventually P2 uniformity\<close>
+      and P1P2P: \<open>P1 (x1, y1) \<Longrightarrow> P2 (x2, y2) \<Longrightarrow> P ((x1, x2), (y1, y2))\<close> for x1 y1 x2 y2
+    by (auto simp: eventually_filtermap case_prod_beta eventually_prod_filter)
+  from \<open>eventually P1 uniformity\<close> obtain e1 where \<open>e1>0\<close> and e1P1: \<open>dist x y < e1 \<Longrightarrow> P1 (x,y)\<close> for x y
+    using eventually_uniformity_metric by blast
+  from \<open>eventually P2 uniformity\<close> obtain e2 where \<open>e2>0\<close> and e2P2: \<open>dist x y < e2 \<Longrightarrow> P2 (x,y)\<close> for x y
+    using eventually_uniformity_metric by blast
+  define e where \<open>e = min e1 e2\<close>
+  have \<open>e > 0\<close>
+    using \<open>0 < e1\<close> \<open>0 < e2\<close> e_def by auto
+  have \<open>dist (x1,x2) (y1,y2) < e \<Longrightarrow> dist x1 y1 < e1\<close> for x1 y1 :: 'a and x2 y2 :: 'b
+    unfolding dist_prod_def e_def apply auto
+    by (smt (verit, best) real_sqrt_sum_squares_ge1)
+  moreover have \<open>dist (x1,x2) (y1,y2) < e \<Longrightarrow> dist x2 y2 < e2\<close> for x1 y1 :: 'a and x2 y2 :: 'b
+    unfolding dist_prod_def e_def apply auto
+    by (smt (verit, best) real_sqrt_sum_squares_ge1)
+  ultimately have *: \<open>dist (x1,x2) (y1,y2) < e \<Longrightarrow> P ((x1, x2), (y1, y2))\<close> for x1 y1 x2 y2
+    using e1P1 e2P2 P1P2P by auto
+
+  show \<open>eventually P (INF e\<in>{0<..}. principal {(x, y). dist x y < e})\<close>
+    apply (rule eventually_INF1[where i=e])
+    using \<open>e > 0\<close> * by (auto simp: eventually_principal)
+qed
+
+(* Doesn't work *)
+instantiation prod :: (uniform_space,uniform_space) uniform_space begin
+
+thm uniformity_dist
+thm uniformity_prod_def
 
 end

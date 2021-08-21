@@ -1047,11 +1047,6 @@ lemma
   using assms apply (rule pos_infsum_exists; simp)
   using assms by (rule pos_infsum; simp)
 
-(* TODO move *)
-lemma isCont_ennreal[simp]: \<open>isCont ennreal x\<close>
-  apply (rule continuous_at_sequentiallyI)
-  by simp
-
 lemma infsum_nonneg_is_SUPREMUM_ennreal:
   fixes f :: "'a \<Rightarrow> real"
   assumes summable: "infsum_exists f A"
@@ -1153,118 +1148,6 @@ proof -
     by (metis abs_of_nonneg infsum_def le_less_trans norm_ge_zero norm_infsum_bound norm_of_real not_le order_refl)
 qed
 
-(* TODO move *)
-lemma tendsto_iff_uniformity:
-  fixes l :: \<open>'b :: uniform_space\<close>
-  shows \<open>(f \<longlongrightarrow> l) F \<longleftrightarrow> (\<forall>E. eventually E uniformity \<longrightarrow> (\<forall>\<^sub>F x in F. E (f x, l)))\<close>
-proof (intro iffI allI impI)
-  fix E :: \<open>('b \<times> 'b) \<Rightarrow> bool\<close>
-  assume \<open>(f \<longlongrightarrow> l) F\<close> and \<open>eventually E uniformity\<close>
-  from \<open>eventually E uniformity\<close>
-  have \<open>eventually (\<lambda>(x, y). E (y, x)) uniformity\<close>
-    by (simp add: uniformity_sym)
-  then have \<open>\<forall>\<^sub>F (y, x) in uniformity. y = l \<longrightarrow> E (x, y)\<close>
-    using eventually_mono by fastforce
-  with \<open>(f \<longlongrightarrow> l) F\<close> have \<open>eventually (\<lambda>x. E (x ,l)) (filtermap f F)\<close>
-    by (simp add: filterlim_def le_filter_def eventually_nhds_uniformity)
-  then show \<open>\<forall>\<^sub>F x in F. E (f x, l)\<close>
-    by (simp add: eventually_filtermap)
-next
-  assume assm: \<open>\<forall>E. eventually E uniformity \<longrightarrow> (\<forall>\<^sub>F x in F. E (f x, l))\<close>
-  have \<open>eventually P (filtermap f F)\<close> if \<open>\<forall>\<^sub>F (x, y) in uniformity. x = l \<longrightarrow> P y\<close> for P
-  proof -
-    from that have \<open>\<forall>\<^sub>F (y, x) in uniformity. x = l \<longrightarrow> P y\<close> 
-      using uniformity_sym[where E=\<open>\<lambda>(x,y). x=l \<longrightarrow> P y\<close>] by auto
-    with assm have \<open>\<forall>\<^sub>F x in F. P (f x)\<close>
-      by auto
-    then show ?thesis
-      by (auto simp: eventually_filtermap)
-  qed
-  then show \<open>(f \<longlongrightarrow> l) F\<close>
-    by (simp add: filterlim_def le_filter_def eventually_nhds_uniformity)
-qed
-
-(* TODO move *)
-lemma uniformity_multi_trans:
-  fixes E :: \<open>('a \<times> 'a::uniform_space) \<Rightarrow> bool\<close>
-  assumes \<open>eventually E uniformity\<close>
-  obtains D where \<open>eventually (\<lambda>(x,y). D x y) uniformity\<close>
-    and \<open>\<And>m. m \<le> n \<Longrightarrow> D ^^ m \<le> (\<lambda>x y. E (x, y))\<close>
-proof (atomize_elim, induction n)
-  case 0
-  show ?case
-    by (metis assms bot_nat_0.extremum_unique case_prod_eta refl_ge_eq relpowp.simps(1) uniformity_refl)
-next
-  define E' where \<open>E' x y = E (x,y)\<close> for x y
-  case (Suc n)
-  show ?case
-  proof (cases \<open>n=0\<close>)
-    case True
-    then show ?thesis 
-      using assms apply (auto intro!: exI[of _ \<open>\<lambda>x y. E (x, y)\<close>])
-      by (metis (mono_tags, lifting) One_nat_def eq_OO eq_iff le_less_linear less_one relpowp.simps(1) relpowp.simps(2) uniformity_refl)
-  next
-    case False
-    from Suc obtain D where \<open>eventually (case_prod D) uniformity\<close> and D_multitrans: \<open>\<forall>m\<le>n. (D ^^ m) \<le> E'\<close>
-      by (auto simp: E'_def le_fun_def)
-    obtain D' where D'_uni: \<open>eventually (case_prod D') uniformity\<close> and D'_trans: \<open>D' OO D' \<le> D\<close>
-      using uniformity_trans[OF \<open>eventually (case_prod D) uniformity\<close>]
-      apply atomize_elim apply (auto simp: le_fun_def OO_def)
-      by (metis case_prod_eta)
-    have \<open>D' \<le> D\<close>
-      using D'_trans D'_uni uniformity_refl by fastforce
-    then have pow_mono: \<open>(D' ^^ m) \<le> (D ^^ m)\<close> for m
-      apply (induction m) by auto
-
-    have \<open>D' ^^ Suc n = D' OO D' OO (D' ^^ (n-1))\<close>
-      by (metis False diff_Suc_1 not0_implies_Suc relpowp.simps(2) relpowp_commute)
-    also from D'_trans have \<open>\<dots> \<le> D OO (D' ^^ (n-1))\<close>
-      by blast
-    also have \<open>\<dots> \<le> D OO (D ^^ (n-1))\<close>
-      using pow_mono by blast
-    also have \<open>\<dots> = D ^^ n\<close>
-      by (metis Suc_pred' neq0_conv relpowp.simps(2) relpowp_commute False)
-    also have \<open>\<dots> \<le> E'\<close>
-      using D_multitrans by blast
-    finally have D'_Sn: \<open>D' ^^ Suc n \<le> E'\<close>
-      by -
-
-    from D_multitrans have D'_n: \<open>\<forall>m\<le>n. (D' ^^ m) \<le> E'\<close>
-      by (meson order_trans pow_mono)
-
-    from D'_Sn D'_n D'_uni
-    show ?thesis
-      apply (auto intro!: exI[of _ D'])
-      by (metis D'_Sn E'_def le_Suc_eq predicate2D)
-  qed
-qed
-
-(* TODO move *)
-lemma uniformity_eventually_trans[trans]:
-  fixes A B C :: \<open>'a \<Rightarrow> 'b :: uniform_space\<close>
-  assumes \<open>\<forall>E. eventually E uniformity \<longrightarrow> eventually (\<lambda>x. E (A x, B x)) F\<^sub>1\<close>
-  assumes \<open>\<forall>E. eventually E uniformity \<longrightarrow> eventually (\<lambda>x. E (B x, C x)) F\<^sub>2\<close>
-  shows \<open>\<forall>E. eventually E uniformity \<longrightarrow> eventually (\<lambda>x. E (A x, C x)) (inf F\<^sub>1 F\<^sub>2)\<close>
-proof (intro allI impI)
-  fix E :: \<open>('b \<times> 'b) \<Rightarrow> bool\<close>
-  assume \<open>eventually E uniformity\<close>
-  then obtain D where \<open>eventually D uniformity\<close> and DDE: \<open>D (x, y) \<Longrightarrow> D (y, z) \<Longrightarrow> E (x, z)\<close> for x y z
-    apply (rule uniformity_transE) by auto
-  with assms have \<open>eventually (\<lambda>x. D (A x, B x)) F\<^sub>1\<close> and \<open>eventually (\<lambda>x. D (B x, C x)) F\<^sub>2\<close>
-    by auto
-  then show \<open>eventually (\<lambda>x. E (A x, C x)) (inf F\<^sub>1 F\<^sub>2)\<close>
-    using DDE eventually_inf by blast
-qed
-
-
-(* TODO move *)
-lemma indexed_list_sum:
-  assumes \<open>distinct L\<close>
-  shows \<open>(\<Sum>i<length L. f (L!i)) = (\<Sum>x\<in>set L. f x)\<close>
-  using assms apply (induction L rule:rev_induct)
-   apply auto
-  by (metis (no_types, lifting) add.commute lessThan_iff nth_append sum.cong)
-
 lemma sum_uniformity:
   (* TODO: replace by simpler equivalent condition (one-sided uniform continuity but D independent of choice of added constant *)
   assumes plus_cont: \<open>\<And>E::('b\<times>'b::{uniform_space,comm_monoid_add}) \<Rightarrow> bool. eventually E uniformity \<Longrightarrow> eventually (\<lambda>((x,y),(x',y')). E (x+x', y+y')) (uniformity \<times>\<^sub>F uniformity)\<close>
@@ -1362,6 +1245,9 @@ proof (rule plus_uniform_cont_metric; intro allI impI assms)
     using \<open>0 < e\<close> apply auto
     by (smt (verit, ccfv_SIG) dist_add_cancel dist_add_cancel2 dist_commute dist_triangle_lt)
 qed
+
+(* TODO: align which Sigma-lemmas have a prime with sum.Sigma (it's opposite from what we have).
+Maybe even drop the variants where f :: a*b\<Rightarrow>c? *)
 
 lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
@@ -1699,7 +1585,6 @@ proof -
     by (simp add: complex_eqI)
 qed
 
-(* TODO same for complex *)
 lemma sum_leq_infsetsum:
   fixes f :: "'a \<Rightarrow> 'b::{ordered_comm_monoid_add,linorder_topology}"
   assumes "infsum_exists f N"
