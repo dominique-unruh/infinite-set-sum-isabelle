@@ -724,9 +724,6 @@ lemma
   by (rule infsum_comm_additive_general; auto simp: assms additive.sum)
 
 
-(* Rename from here TODO *)
-
-
 subsection \<open>Infinite sum over specific monoids\<close>
 
 lemma infsum_exists_ennreal[simp]: \<open>infsum_exists (f::_ \<Rightarrow> ennreal) S\<close>
@@ -858,62 +855,6 @@ proof -
     by -
 qed
 
-(* TODO move *)
-lemma ennreal_of_enat_plus[simp]: \<open>ennreal_of_enat (a+b) = ennreal_of_enat a + ennreal_of_enat b\<close>
-  apply (induction a)
-  apply auto
-  by (smt (z3) add.commute add.right_neutral enat.exhaust enat.simps(4) enat.simps(5) ennreal_add_left_cancel ennreal_of_enat_def infinity_ennreal_def of_nat_add of_nat_eq_enat plus_enat_simps(2))
-
-(* TODO move *)
-lemma sum_ennreal_of_enat[simp]: "(\<Sum>i\<in>I. ennreal_of_enat (f i)) = ennreal_of_enat (sum f I)"
-  apply (induction I rule: infinite_finite_induct) 
-  by (auto simp: sum_nonneg)
-
-(* TODO move *)
-lemma isCont_ennreal_of_enat[simp]: \<open>isCont ennreal_of_enat x\<close>
-proof (subst continuous_at_open, intro allI impI, cases \<open>x = \<infinity>\<close>)
-  case True
-  note True[simp]
-
-  thm open_generated_order
-  thm open_left
-
-  fix t assume \<open>open t \<and> ennreal_of_enat x \<in> t\<close>
-  then have \<open>\<exists>y<\<infinity>. {y <.. \<infinity>} \<subseteq> t\<close>
-    apply (rule_tac open_left[where y=0])
-    by auto
-  then obtain y where \<open>{y<..} \<subseteq> t\<close> and \<open>y \<noteq> \<infinity>\<close>
-    apply atomize_elim
-    apply (auto simp: greaterThanAtMost_def)
-    by (metis atMost_iff inf.orderE subsetI top.not_eq_extremum top_greatest)
-
-  from \<open>y \<noteq> \<infinity>\<close>
-  obtain x' where x'y: \<open>ennreal_of_enat x' > y\<close> and \<open>x' \<noteq> \<infinity>\<close>
-    by (metis enat.simps(3) ennreal_Ex_less_of_nat ennreal_of_enat_enat infinity_ennreal_def top.not_eq_extremum)
-  define s where \<open>s = {x'<..}\<close>
-  have \<open>open s\<close>
-    by (simp add: s_def)
-  moreover have \<open>x \<in> s\<close>
-    by (simp add: \<open>x' \<noteq> \<infinity>\<close> s_def)
-  moreover have \<open>ennreal_of_enat z \<in> t\<close> if \<open>z \<in> s\<close> for z
-    by (metis x'y \<open>{y<..} \<subseteq> t\<close> ennreal_of_enat_le_iff greaterThan_iff le_less_trans less_imp_le not_less s_def subsetD that)
-  ultimately show \<open>\<exists>s. open s \<and> x \<in> s \<and> (\<forall>z\<in>s. ennreal_of_enat z \<in> t)\<close>
-    by auto
-next
-  case False
-  fix t assume asm: \<open>open t \<and> ennreal_of_enat x \<in> t\<close>
-  define s where \<open>s = {x}\<close>
-  have \<open>open s\<close>
-    using False open_enat_iff s_def by blast
-  moreover have \<open>x \<in> s\<close>
-    using s_def by auto
-  moreover have \<open>ennreal_of_enat z \<in> t\<close> if \<open>z \<in> s\<close> for z
-    using asm s_def that by blast
-  ultimately show \<open>\<exists>s. open s \<and> x \<in> s \<and> (\<forall>z\<in>s. ennreal_of_enat z \<in> t)\<close>
-    by auto
-qed
-
-
 lemma infsum_superconst_infinite_enat:
   fixes f :: \<open>'a \<Rightarrow> enat\<close>
   assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
@@ -932,10 +873,8 @@ proof -
     by (rule ennreal_of_enat_inj[THEN iffD1])
 qed
 
-subsection \<open>UNSORTED\<close>
 
-
-lemma infsum_exists_iff[simp]:
+lemma infsum_exists_cnj_iff[simp]:
   "infsum_exists (\<lambda>i. cnj (f i)) A \<longleftrightarrow> infsum_exists f A"
 proof auto
   assume assm: \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
@@ -993,45 +932,6 @@ lemma infsum_exists_Im:
   apply (rule infsum_exists_comm_additive[where f=Im, unfolded o_def])
   using assms by (auto intro!: additive.intro)
 
-lemma infsum_mono_complex:
-  \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm infsum_mono} can be used. But \<^typ>\<open>complex\<close> does not have the right typeclass.\<close>
-  fixes f g :: "'a \<Rightarrow> complex"
-  assumes f_sum: "infsum_exists f A" and g_sum: "infsum_exists g A"
-  assumes leq: "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
-  shows   "infsum f A \<le> infsum g A"
-proof -
-  from leq have \<open>Im (f x) = Im (g x)\<close> if \<open>x \<in> A\<close> for x
-    using that by force
-  then have \<open>infsum (Im o f) A = infsum (Im o g) A\<close>
-    apply (rule_tac infsum_cong)
-    by simp
-  moreover have \<open>infsum (Im o f) A = Im (infsum f A)\<close>
-    by (metis (mono_tags, lifting) comp_apply f_sum infsum_Im infsum_cong)
-  moreover have \<open>infsum (Im o g) A = Im (infsum g A)\<close>
-    by (metis (mono_tags, lifting) comp_apply g_sum infsum_Im infsum_cong)
-  ultimately have Im: \<open>Im (infsum f A) = Im (infsum g A)\<close>
-    by auto
-
-  have conv_Re_f: \<open>infsum_exists (Re \<circ> f) A\<close>
-    by (simp add: f_sum infsum_exists_Re infsum_exists_cong)
-  have conv_Re_g: \<open>infsum_exists (Re \<circ> g) A\<close>
-    by (simp add: g_sum infsum_exists_Re infsum_exists_cong)
-
-  from leq have \<open>Re (f x) \<le> Re (g x)\<close> if \<open>x \<in> A\<close> for x
-    using that by force
-  then have \<open>infsum (Re o f) A \<le> infsum (Re o g) A\<close>
-    apply (rule_tac infsum_mono)
-    using conv_Re_f conv_Re_g by auto
-  moreover have \<open>infsum (Re o f) A = Re (infsum f A)\<close>
-    by (metis (mono_tags, lifting) comp_apply f_sum infsum_Re infsum_cong)
-  moreover have \<open>infsum (Re o g) A = Re (infsum g A)\<close>
-    by (metis (mono_tags, lifting) comp_apply g_sum infsum_Re infsum_cong)
-  ultimately have Re: \<open>Re (infsum f A) \<le> Re (infsum g A)\<close>
-    by auto
-
-  from Im Re show \<open>infsum f A \<le> infsum g A\<close>
-    by auto
-qed
 
 text \<open>@{thm infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
 Thus we have a separate corollary for those:\<close>
@@ -1058,6 +958,17 @@ proof -
   from Re Im show ?thesis
     by auto
 qed
+
+
+lemma infsum_mono_complex:
+  \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm infsum_mono} can be used. But \<^typ>\<open>complex\<close> does not have the right typeclass.\<close>
+  fixes f g :: "'a \<Rightarrow> complex"
+  assumes f_sum: "infsum_exists f A" and g_sum: "infsum_exists g A"
+  assumes leq: "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
+  shows   "infsum f A \<le> infsum g A"
+  by (metis DiffE IntD1 f_sum g_sum infsum_mono_neutral_complex leq)
+
+subsection \<open>UNSORTED\<close>
 
 
 lemma
