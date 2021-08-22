@@ -724,265 +724,19 @@ lemma
   by (rule infsum_comm_additive_general; auto simp: assms additive.sum)
 
 
-subsection \<open>Infinite sum over specific monoids\<close>
-
-lemma infsum_exists_ennreal[simp]: \<open>infsum_exists (f::_ \<Rightarrow> ennreal) S\<close>
-proof -
-  define B where \<open>B = (SUP F\<in>{F. F \<subseteq> S \<and> finite F}. sum f F)\<close>
-
-  have upper: \<open>\<forall>\<^sub>F F in finite_subsets_at_top S. sum f F \<le> B\<close>
-    apply (rule eventually_finite_subsets_at_top_weakI)
-    unfolding B_def
-    by (simp add: SUP_upper)
-  have lower: \<open>\<forall>\<^sub>F n in finite_subsets_at_top S. x < sum f n\<close> if \<open>x < B\<close> for x
-  proof -
-    obtain F where Fx: \<open>sum f F > x\<close> and \<open>F \<subseteq> S\<close> and \<open>finite F\<close>
-      using \<open>x < B\<close> unfolding B_def
-      by (metis (mono_tags, lifting)  less_SUP_iff mem_Collect_eq)
-    have geq: \<open>sum f Y \<ge> sum f F\<close> if \<open>finite Y\<close> and \<open>Y \<supseteq> F\<close> for Y
-      by (simp add: sum_mono2 that(1) that(2))
-    show ?thesis
-      unfolding eventually_finite_subsets_at_top
-      apply (rule exI[of _ F])
-      using \<open>finite F\<close> \<open>F \<subseteq> S\<close> Fx geq by force
-  qed
-  
-  show ?thesis
-    unfolding infsum_exists_def
-    apply (rule exI[of _ B])
-    using upper lower by (rule increasing_tendsto)
-qed
-
-lemma infsum_exists_pos_ereal: 
-  assumes \<open>\<And>x. x\<in>S \<Longrightarrow> f x \<ge> 0\<close>
-  shows \<open>infsum_exists (f::_ \<Rightarrow> ereal) S\<close>
-proof -
-  have \<open>infsum_exists (e2ennreal o f) S\<close>
-    by simp
-  then have \<open>infsum_exists (enn2ereal o (e2ennreal o f)) S\<close>
-    apply (rule infsum_exists_comm_additive_general[rotated -1])
-    by (auto simp: continuous_at_enn2ereal)
-  then show \<open>infsum_exists f S\<close>
-    apply (rule infsum_exists_cong[THEN iffD2, rotated])
-    using assms enn2ereal_e2ennreal by auto
-qed
-
-lemma infsum_exists_enat[simp]: \<open>infsum_exists (f::_ \<Rightarrow> enat) S\<close>
-proof -
-  define B where \<open>B = (SUP F\<in>{F. F \<subseteq> S \<and> finite F}. sum f F)\<close>
-
-  have upper: \<open>\<forall>\<^sub>F F in finite_subsets_at_top S. sum f F \<le> B\<close>
-    apply (rule eventually_finite_subsets_at_top_weakI)
-    unfolding B_def
-    by (simp add: SUP_upper)
-  have lower: \<open>\<forall>\<^sub>F n in finite_subsets_at_top S. x < sum f n\<close> if \<open>x < B\<close> for x
-  proof -
-    obtain F where Fx: \<open>sum f F > x\<close> and \<open>F \<subseteq> S\<close> and \<open>finite F\<close>
-      using \<open>x < B\<close> unfolding B_def
-      by (metis (mono_tags, lifting)  less_SUP_iff mem_Collect_eq)
-    have geq: \<open>sum f Y \<ge> sum f F\<close> if \<open>finite Y\<close> and \<open>Y \<supseteq> F\<close> for Y
-      by (simp add: sum_mono2 that(1) that(2))
-    show ?thesis
-      unfolding eventually_finite_subsets_at_top
-      apply (rule exI[of _ F])
-      using \<open>finite F\<close> \<open>F \<subseteq> S\<close> Fx geq by force
-  qed
-  
-  show ?thesis
-    unfolding infsum_exists_def
-    apply (rule exI[of _ B])
-    using upper lower by (rule increasing_tendsto)
-qed
-
-lemma infsum_superconst_infinite_ennreal:
-  fixes f :: \<open>'a \<Rightarrow> ennreal\<close>
-  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
-  assumes b: \<open>b > 0\<close>
-  assumes \<open>infinite S\<close>
-  shows "infsum f S = \<infinity>"
-proof -
-  have \<open>(sum f \<longlongrightarrow> \<infinity>) (finite_subsets_at_top S)\<close>
-  proof (rule order_tendstoI[rotated], simp)
-    fix y :: ennreal assume \<open>y < \<infinity>\<close>
-    then have \<open>y / b < \<infinity>\<close>
-      by (metis b ennreal_divide_eq_top_iff gr_implies_not_zero infinity_ennreal_def top.not_eq_extremum)
-    then obtain F where \<open>finite F\<close> and \<open>F \<subseteq> S\<close> and cardF: \<open>card F > y / b\<close>
-      using \<open>infinite S\<close>
-      by (metis ennreal_Ex_less_of_nat infinite_arbitrarily_large infinity_ennreal_def)
-    moreover have \<open>sum f Y > y\<close> if \<open>finite Y\<close> and \<open>F \<subseteq> Y\<close> and \<open>Y \<subseteq> S\<close> for Y
-    proof -
-      have \<open>y < b * card F\<close>
-        by (metis \<open>y < \<infinity>\<close> b cardF divide_less_ennreal ennreal_mult_eq_top_iff gr_implies_not_zero infinity_ennreal_def mult.commute top.not_eq_extremum)
-      also have \<open>\<dots> \<le> b * card Y\<close>
-        by (meson b card_mono less_imp_le mult_left_mono of_nat_le_iff that(1) that(2))
-      also have \<open>\<dots> = sum (\<lambda>_. b) Y\<close>
-        by (simp add: mult.commute)
-      also have \<open>\<dots> \<le> sum f Y\<close>
-        using geqb by (meson subset_eq sum_mono that(3))
-      finally show ?thesis
-        by -
-    qed
-    ultimately show \<open>\<forall>\<^sub>F x in finite_subsets_at_top S. y < sum f x\<close>
-      unfolding eventually_finite_subsets_at_top 
-      by auto
-  qed
-  then show ?thesis
-    unfolding infsum_def 
-    by (simp add: tendsto_Lim)
-qed
-
-lemma infsum_superconst_infinite_ereal:
-  fixes f :: \<open>'a \<Rightarrow> ereal\<close>
-  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
-  assumes b: \<open>b > 0\<close>
-  assumes \<open>infinite S\<close>
-  shows "infsum f S = \<infinity>"
-proof -
-  obtain b' where b': \<open>e2ennreal b' = b\<close> and \<open>b' > 0\<close>
-    using b by blast
-  have *: \<open>infsum (e2ennreal o f) S = \<infinity>\<close>
-    apply (rule infsum_superconst_infinite_ennreal[where b=b'])
-    using assms \<open>b' > 0\<close> b' e2ennreal_mono apply auto
-    by (metis dual_order.strict_iff_order enn2ereal_e2ennreal le_less_linear zero_ennreal_def)
-  have \<open>infsum f S = infsum (enn2ereal o (e2ennreal o f)) S\<close>
-    by (smt (verit, best) b comp_apply dual_order.trans enn2ereal_e2ennreal geqb infsum_cong less_imp_le)
-  also have \<open>\<dots> = enn2ereal \<infinity>\<close>
-    apply (subst infsum_comm_additive_general)
-    using * by (auto simp: continuous_at_enn2ereal)
-  also have \<open>\<dots> = \<infinity>\<close>
-    by simp
-  finally show ?thesis
-    by -
-qed
-
-lemma infsum_superconst_infinite_enat:
-  fixes f :: \<open>'a \<Rightarrow> enat\<close>
-  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
-  assumes b: \<open>b > 0\<close>
-  assumes \<open>infinite S\<close>
-  shows "infsum f S = \<infinity>"
-proof -
-  have \<open>ennreal_of_enat (infsum f S) = infsum (ennreal_of_enat o f) S\<close>
-    apply (rule infsum_comm_additive_general[symmetric])
-    by auto
-  also have \<open>\<dots> = \<infinity>\<close>
-    by (metis assms(3) b comp_apply ennreal_of_enat_0 ennreal_of_enat_inj ennreal_of_enat_le_iff geqb infsum_superconst_infinite_ennreal not_gr_zero)
-  also have \<open>\<dots> = ennreal_of_enat \<infinity>\<close>
-    by simp
-  finally show ?thesis
-    by (rule ennreal_of_enat_inj[THEN iffD1])
-qed
-
-
-lemma infsum_exists_cnj_iff[simp]:
-  "infsum_exists (\<lambda>i. cnj (f i)) A \<longleftrightarrow> infsum_exists f A"
-proof auto
-  assume assm: \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
-  then have \<open>infsum_exists (\<lambda>x. cnj (cnj (f x))) A\<close>
-    apply (rule_tac infsum_exists_comm_additive[where f=cnj, unfolded o_def])
-    by (auto intro!: additive.intro)
-  then show \<open>infsum_exists f A\<close>
-    by simp
-next
-  assume \<open>infsum_exists f A\<close>
-  then show \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
-    apply (rule_tac infsum_exists_comm_additive[where f=cnj, unfolded o_def])
-    by (auto intro!: additive.intro)
-qed
-
-lemma infsetsum_cnj[simp]: \<open>infsum (\<lambda>x. cnj (f x)) M = cnj (infsum f M)\<close>
-proof (cases \<open>infsum_exists f M\<close>)
-  case True
-  then show ?thesis
-    apply (rule_tac infsum_comm_additive[where f=cnj, unfolded o_def])
-    by (auto intro!: additive.intro)
-next
-  case False
-  then have 1: \<open>infsum f M = 0\<close>
-    by (simp add: infsum_def)
-  from False have \<open>\<not> infsum_exists (\<lambda>x. cnj (f x)) M\<close>
-    by simp
-  then have 2: \<open>infsum (\<lambda>x. cnj (f x)) M = 0\<close>
-    by (simp add: infsum_def)
-  from 1 2 show ?thesis
-    by simp
-qed
-
-lemma infsum_Re: 
-  assumes "infsum_exists f M"
-  shows "infsum (\<lambda>x. Re (f x)) M = Re (infsum f M)"
-  apply (rule infsum_comm_additive[where f=Re, unfolded o_def])
-  using assms by (auto intro!: additive.intro)
-
-lemma infsum_exists_Re: 
-  assumes "infsum_exists f M"
-  shows "infsum_exists (\<lambda>x. Re (f x)) M"
-  apply (rule infsum_exists_comm_additive[where f=Re, unfolded o_def])
-  using assms by (auto intro!: additive.intro)
-
-lemma infsum_Im: 
-  assumes "infsum_exists f M"
-  shows "infsum (\<lambda>x. Im (f x)) M = Im (infsum f M)"
-  apply (rule infsum_comm_additive[where f=Im, unfolded o_def])
-  using assms by (auto intro!: additive.intro)
-
-lemma infsum_exists_Im: 
-  assumes "infsum_exists f M"
-  shows "infsum_exists (\<lambda>x. Im (f x)) M"
-  apply (rule infsum_exists_comm_additive[where f=Im, unfolded o_def])
-  using assms by (auto intro!: additive.intro)
-
-
-text \<open>@{thm infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
-Thus we have a separate corollary for those:\<close>
-
-lemma infsum_mono_neutral_complex:
-  fixes f :: "'a \<Rightarrow> complex"
-  assumes [simp]: "infsum_exists f A"
-    and [simp]: "infsum_exists g B"
-  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
-  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
-  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
-  shows "infsum f A \<le> infsum g B"
-proof -
-  have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (g x)) B\<close>
-    apply (rule infsum_mono_neutral)
-    using assms(3-5) by (auto simp add: infsum_exists_Re)
-  then have Re: \<open>Re (infsum f A) \<le> Re (infsum g B)\<close>
-    by (metis assms(1-2) infsum_Re)
-  have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (g x)) B\<close>
-    apply (rule infsum_neutral_cong)
-    using assms(3-5) by (auto simp add: infsum_exists_Re)
-  then have Im: \<open>Im (infsum f A) = Im (infsum g B)\<close>
-    by (metis assms(1-2) infsum_Im)
-  from Re Im show ?thesis
-    by auto
-qed
-
-
-lemma infsum_mono_complex:
-  \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm infsum_mono} can be used. But \<^typ>\<open>complex\<close> does not have the right typeclass.\<close>
-  fixes f g :: "'a \<Rightarrow> complex"
-  assumes f_sum: "infsum_exists f A" and g_sum: "infsum_exists g A"
-  assumes leq: "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
-  shows   "infsum f A \<le> infsum g A"
-  by (metis DiffE IntD1 f_sum g_sum infsum_mono_neutral_complex leq)
-
-subsection \<open>UNSORTED\<close>
-
-
+(* TODO rename *)
 lemma
   fixes f :: \<open>'a \<Rightarrow> 'b :: {conditionally_complete_linorder, ordered_comm_monoid_add, linorder_topology}\<close>
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0\<close>
   assumes \<open>bdd_above (sum f ` {F. F\<subseteq>A \<and> finite F})\<close>
   shows pos_infsum_exists: \<open>infsum_exists f A\<close> (is ?ex)
-    and pos_infsum: \<open>infsum f A = (SUP F\<in>{F. F\<subseteq>A \<and> finite F}. sum f F)\<close> (is ?sum)
+    and pos_infsum: \<open>infsum f A = (SUP F\<in>{F. finite F \<and> F\<subseteq>A}. sum f F)\<close> (is ?sum)
 proof -
-  have *: \<open>(sum f \<longlongrightarrow> (SUP F\<in>{F. F\<subseteq>A \<and> finite F}. sum f F)) (finite_subsets_at_top A)\<close>
+  have *: \<open>(sum f \<longlongrightarrow> (SUP F\<in>{F. finite F \<and> F\<subseteq>A}. sum f F)) (finite_subsets_at_top A)\<close>
   proof (rule order_tendstoI)
-    fix a assume \<open>a < (SUP F\<in>{F. F\<subseteq>A \<and> finite F}. sum f F)\<close>
+    fix a assume \<open>a < (SUP F\<in>{F. finite F \<and> F\<subseteq>A}. sum f F)\<close>
     then obtain F where \<open>a < sum f F\<close> and \<open>finite F\<close> and \<open>F \<subseteq> A\<close>
-      by (metis (mono_tags, lifting) Collect_empty_eq assms(2) empty_subsetI finite.emptyI less_cSUP_iff mem_Collect_eq)
+      by (metis (mono_tags, lifting) Collect_cong Collect_empty_eq assms(2) empty_subsetI finite.emptyI less_cSUP_iff mem_Collect_eq)
     show \<open>\<forall>\<^sub>F x in finite_subsets_at_top A. a < sum f x\<close>
       unfolding eventually_finite_subsets_at_top
       apply (rule exI[of _ F])
@@ -990,9 +744,9 @@ proof -
       apply auto
       by (smt (verit, best) Diff_iff assms(1) less_le_trans subset_iff sum_mono2)
   next
-    fix a assume \<open>(SUP F\<in>{F. F\<subseteq>A \<and> finite F}. sum f F) < a\<close>
+    fix a assume \<open>(SUP F\<in>{F. finite F \<and> F\<subseteq>A}. sum f F) < a\<close>
     then have \<open>sum f F < a\<close> if \<open>F\<subseteq>A\<close> and \<open>finite F\<close> for F
-      using assms cSUP_lessD that(1) that(2) by fastforce
+      by (smt (verit, best) Collect_cong antisym_conv assms(2) cSUP_upper dual_order.trans le_less_linear less_le mem_Collect_eq that(1) that(2))
     then show \<open>\<forall>\<^sub>F x in finite_subsets_at_top A. sum f x < a\<close>
       by (rule eventually_finite_subsets_at_top_weakI)
   qed
@@ -1003,114 +757,22 @@ proof -
     by (simp add: infsum_def tendsto_Lim)
 qed
 
+(* TODO rename *)
 lemma
   fixes f :: \<open>'a \<Rightarrow> 'b :: {complete_linorder, ordered_comm_monoid_add, linorder_topology}\<close>
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0\<close>
   shows pos_infsum_exists_complete: \<open>infsum_exists f A\<close> (is ?ex)
-    and pos_infsum_complete: \<open>infsum f A = (SUP F\<in>{F. F\<subseteq>A \<and> finite F}. sum f F)\<close> (is ?sum)
+    and pos_infsum_complete: \<open>infsum f A = (SUP F\<in>{F. finite F \<and> F\<subseteq>A}. sum f F)\<close> (is ?sum)
   using assms apply (rule pos_infsum_exists; simp)
   using assms by (rule pos_infsum; simp)
 
-lemma infsum_nonneg_is_SUPREMUM_ennreal:
-  fixes f :: "'a \<Rightarrow> real"
-  assumes summable: "infsum_exists f A"
-    and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
-  shows "ennreal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ennreal (sum f F)))"
-proof -
-  have \<open>ennreal (infsum f A) = infsum (ennreal o f) A\<close>
-    apply (rule infsum_comm_additive_general[symmetric])
-    apply (subst sum_ennreal[symmetric])
-    using assms by auto
-  also have \<open>\<dots> = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ennreal (sum f F)))\<close>
-    apply (subst pos_infsum_complete, simp)
-    apply (rule SUP_cong, blast)
-    apply (subst sum_ennreal[symmetric])
-    using fnn by auto
-  finally show ?thesis
-    by -
-qed
-
-lemma infsum_nonneg_is_SUPREMUM_ereal:
-  fixes f :: "'a \<Rightarrow> real"
-  assumes summable: "infsum_exists f A"
-    and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
-  shows "ereal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))"
-proof -
-  have \<open>ereal (infsum f A) = infsum (ereal o f) A\<close>
-    apply (rule infsum_comm_additive_general[symmetric])
-    using assms by auto
-  also have \<open>\<dots> = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))\<close>
-    apply (subst pos_infsum_complete)
-     apply (simp_all add: assms)[2]
-    apply (rule SUP_cong, blast)
-    using fnn by auto
-  finally show ?thesis
-    by -
-qed
-
-lemma infsetsum_nonneg_is_SUPREMUM:
-  fixes f :: "'a \<Rightarrow> real"
-  assumes summable: "infsum_exists f A"
-    and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
-  shows "infsum f A = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (sum f F))"
-proof -
-  have "ereal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))"
-    using assms by (rule infsum_nonneg_is_SUPREMUM_ereal)
-  also have "\<dots> = ereal (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (sum f F))"
-  proof (subst ereal_SUP)
-    show "\<bar>SUP a\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum f a)\<bar> \<noteq> \<infinity>"
-      using calculation by fastforce      
-    show "(SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum f F)) = (SUP a\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum f a))"
-      by simp      
-  qed
-  finally show ?thesis by simp
-qed
 
 lemma infsetsum_geq0:
   fixes f :: "'a \<Rightarrow> 'b::{ordered_comm_monoid_add,linorder_topology}"
   assumes "infsum_exists f M"
     and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
   shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
-proof -
-  note less_eq_complex_def[simp del]
-  have \<open>infsum f M \<ge> infsum (\<lambda>_. 0) M\<close>
-    apply (rule infsum_mono)
-    using assms by auto
-  then show ?thesis
-    by simp
-qed
-
-lemma infsetsum_geq0_complex:
-  fixes f :: "'a \<Rightarrow> complex"
-  assumes "infsum_exists f M"
-    and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
-  shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
-proof -
-  note less_eq_complex_def[simp del]
-  have \<open>infsum f M \<ge> infsum (\<lambda>_. 0) M\<close>
-    apply (rule infsum_mono_complex)
-    using assms by auto
-  then show ?thesis
-    by simp
-qed
-
-lemma infsetsum_cmod:
-  assumes "infsum_exists f M"
-    and fnn: "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
-  shows "infsum (\<lambda>x. cmod (f x)) M = cmod (infsum f M)"
-proof -
-  have \<open>complex_of_real (infsum (\<lambda>x. cmod (f x)) M) = infsum (\<lambda>x. complex_of_real (cmod (f x))) M\<close>
-    apply (rule infsum_comm_additive[symmetric, unfolded o_def])
-    apply auto
-    apply (simp add: additive.intro)
-    by (smt (verit, best) assms(1) cmod_eq_Re fnn infsum_exists_Re infsum_exists_cong less_eq_complex_def zero_complex.simps(1) zero_complex.simps(2))
-  also have \<open>\<dots> = infsum f M\<close>
-    apply (rule infsum_cong)
-    using fnn
-    using cmod_eq_Re complex_is_Real_iff by force
-  finally show ?thesis
-    by (metis abs_of_nonneg infsum_def le_less_trans norm_ge_zero norm_infsum_bound norm_of_real not_le order_refl)
-qed
+  by (metis assms(1) assms(2) infsum_0_simp infsum_ex_0_simp infsum_mono)
 
 
 lemma
@@ -1373,24 +1035,6 @@ proof (rule ccontr)
     using assms by auto
 qed
 
-lemma infsetsum_0D_complex:
-  fixes f :: "'a \<Rightarrow> complex"
-  assumes "infsum f A = 0"
-    and abs_sum: "infsum_exists f A"
-    and nneg: "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
-    and "x \<in> A"
-  shows "f x = 0"
-proof -
-  have \<open>Im (f x) = 0\<close>
-    apply (rule infsetsum_0D[where A=A])
-    using assms by (auto simp add: abs_sum infsum_exists_Im infsum_Im)
-  moreover have \<open>Re (f x) = 0\<close>
-    apply (rule infsetsum_0D[where A=A])
-    using assms by (auto simp add: abs_sum infsum_exists_Re infsum_Re)
-  ultimately show ?thesis
-    by (simp add: complex_eqI)
-qed
-
 lemma infsetsum_cmult_left:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
   assumes \<open>c \<noteq> 0 \<Longrightarrow> infsum_exists f A\<close>
@@ -1568,6 +1212,157 @@ proof -
     using finite_subsets_at_top_neq_bot infsum_exists_def tendsto_Lim by blast
 qed
 
+subsection \<open>Extended reals and nats\<close>
+
+lemma infsum_exists_ennreal[simp]: \<open>infsum_exists (f::_ \<Rightarrow> ennreal) S\<close>
+  apply (rule pos_infsum_exists_complete) by simp
+
+lemma infsum_exists_enat[simp]: \<open>infsum_exists (f::_ \<Rightarrow> enat) S\<close>
+  apply (rule pos_infsum_exists_complete) by simp
+
+lemma infsum_superconst_infinite_ennreal:
+  fixes f :: \<open>'a \<Rightarrow> ennreal\<close>
+  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
+  assumes b: \<open>b > 0\<close>
+  assumes \<open>infinite S\<close>
+  shows "infsum f S = \<infinity>"
+proof -
+  have \<open>(sum f \<longlongrightarrow> \<infinity>) (finite_subsets_at_top S)\<close>
+  proof (rule order_tendstoI[rotated], simp)
+    fix y :: ennreal assume \<open>y < \<infinity>\<close>
+    then have \<open>y / b < \<infinity>\<close>
+      by (metis b ennreal_divide_eq_top_iff gr_implies_not_zero infinity_ennreal_def top.not_eq_extremum)
+    then obtain F where \<open>finite F\<close> and \<open>F \<subseteq> S\<close> and cardF: \<open>card F > y / b\<close>
+      using \<open>infinite S\<close>
+      by (metis ennreal_Ex_less_of_nat infinite_arbitrarily_large infinity_ennreal_def)
+    moreover have \<open>sum f Y > y\<close> if \<open>finite Y\<close> and \<open>F \<subseteq> Y\<close> and \<open>Y \<subseteq> S\<close> for Y
+    proof -
+      have \<open>y < b * card F\<close>
+        by (metis \<open>y < \<infinity>\<close> b cardF divide_less_ennreal ennreal_mult_eq_top_iff gr_implies_not_zero infinity_ennreal_def mult.commute top.not_eq_extremum)
+      also have \<open>\<dots> \<le> b * card Y\<close>
+        by (meson b card_mono less_imp_le mult_left_mono of_nat_le_iff that(1) that(2))
+      also have \<open>\<dots> = sum (\<lambda>_. b) Y\<close>
+        by (simp add: mult.commute)
+      also have \<open>\<dots> \<le> sum f Y\<close>
+        using geqb by (meson subset_eq sum_mono that(3))
+      finally show ?thesis
+        by -
+    qed
+    ultimately show \<open>\<forall>\<^sub>F x in finite_subsets_at_top S. y < sum f x\<close>
+      unfolding eventually_finite_subsets_at_top 
+      by auto
+  qed
+  then show ?thesis
+    unfolding infsum_def 
+    by (simp add: tendsto_Lim)
+qed
+
+lemma infsum_superconst_infinite_ereal:
+  fixes f :: \<open>'a \<Rightarrow> ereal\<close>
+  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
+  assumes b: \<open>b > 0\<close>
+  assumes \<open>infinite S\<close>
+  shows "infsum f S = \<infinity>"
+proof -
+  obtain b' where b': \<open>e2ennreal b' = b\<close> and \<open>b' > 0\<close>
+    using b by blast
+  have *: \<open>infsum (e2ennreal o f) S = \<infinity>\<close>
+    apply (rule infsum_superconst_infinite_ennreal[where b=b'])
+    using assms \<open>b' > 0\<close> b' e2ennreal_mono apply auto
+    by (metis dual_order.strict_iff_order enn2ereal_e2ennreal le_less_linear zero_ennreal_def)
+  have \<open>infsum f S = infsum (enn2ereal o (e2ennreal o f)) S\<close>
+    by (smt (verit, best) b comp_apply dual_order.trans enn2ereal_e2ennreal geqb infsum_cong less_imp_le)
+  also have \<open>\<dots> = enn2ereal \<infinity>\<close>
+    apply (subst infsum_comm_additive_general)
+    using * by (auto simp: continuous_at_enn2ereal)
+  also have \<open>\<dots> = \<infinity>\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+lemma infsum_superconst_infinite_enat:
+  fixes f :: \<open>'a \<Rightarrow> enat\<close>
+  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
+  assumes b: \<open>b > 0\<close>
+  assumes \<open>infinite S\<close>
+  shows "infsum f S = \<infinity>"
+proof -
+  have \<open>ennreal_of_enat (infsum f S) = infsum (ennreal_of_enat o f) S\<close>
+    apply (rule infsum_comm_additive_general[symmetric])
+    by auto
+  also have \<open>\<dots> = \<infinity>\<close>
+    by (metis assms(3) b comp_apply ennreal_of_enat_0 ennreal_of_enat_inj ennreal_of_enat_le_iff geqb infsum_superconst_infinite_ennreal not_gr_zero)
+  also have \<open>\<dots> = ennreal_of_enat \<infinity>\<close>
+    by simp
+  finally show ?thesis
+    by (rule ennreal_of_enat_inj[THEN iffD1])
+qed
+
+text \<open>This lemma helps to related a real-valued infsum to a supremum over extended reals.\<close>
+
+lemma infsum_nonneg_is_SUPREMUM_ennreal:
+  fixes f :: "'a \<Rightarrow> real"
+  assumes summable: "infsum_exists f A"
+    and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
+  shows "ennreal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ennreal (sum f F)))"
+proof -
+  have \<open>ennreal (infsum f A) = infsum (ennreal o f) A\<close>
+    apply (rule infsum_comm_additive_general[symmetric])
+    apply (subst sum_ennreal[symmetric])
+    using assms by auto
+  also have \<open>\<dots> = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ennreal (sum f F)))\<close>
+    apply (subst pos_infsum_complete, simp)
+    apply (rule SUP_cong, blast)
+    apply (subst sum_ennreal[symmetric])
+    using fnn by auto
+  finally show ?thesis
+    by -
+qed
+
+text \<open>This lemma helps to related a real-valued infsum to a supremum over extended reals.\<close>
+
+lemma infsum_nonneg_is_SUPREMUM_ereal:
+  fixes f :: "'a \<Rightarrow> real"
+  assumes summable: "infsum_exists f A"
+    and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
+  shows "ereal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))"
+proof -
+  have \<open>ereal (infsum f A) = infsum (ereal o f) A\<close>
+    apply (rule infsum_comm_additive_general[symmetric])
+    using assms by auto
+  also have \<open>\<dots> = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))\<close>
+    apply (subst pos_infsum_complete)
+    by (simp_all add: assms)[2]
+  finally show ?thesis
+    by -
+qed
+
+
+subsection \<open>Real numbers\<close>
+
+text \<open>Most lemmas in the general property section apply to real numbers.\<close>
+
+
+lemma infsetsum_nonneg_is_SUPREMUM_real:
+  fixes f :: "'a \<Rightarrow> real"
+  assumes summable: "infsum_exists f A"
+    and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
+  shows "infsum f A = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (sum f F))"
+proof -
+  have "ereal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))"
+    using assms by (rule infsum_nonneg_is_SUPREMUM_ereal)
+  also have "\<dots> = ereal (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (sum f F))"
+  proof (subst ereal_SUP)
+    show "\<bar>SUP a\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum f a)\<bar> \<noteq> \<infinity>"
+      using calculation by fastforce      
+    show "(SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum f F)) = (SUP a\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum f a))"
+      by simp      
+  qed
+  finally show ?thesis by simp
+qed
+
+
 lemma infsum_exists_then_norm_exists_real:
   fixes f :: \<open>'a \<Rightarrow> real\<close>
   assumes \<open>infsum_exists f A\<close>
@@ -1591,6 +1386,149 @@ proof -
   then show \<open>infsum_exists n A\<close>
     by simp
 qed
+
+
+subsection \<open>Complex numbers\<close>
+
+lemma infsum_exists_cnj_iff[simp]:
+  "infsum_exists (\<lambda>i. cnj (f i)) A \<longleftrightarrow> infsum_exists f A"
+proof auto
+  assume assm: \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
+  then have \<open>infsum_exists (\<lambda>x. cnj (cnj (f x))) A\<close>
+    apply (rule_tac infsum_exists_comm_additive[where f=cnj, unfolded o_def])
+    by (auto intro!: additive.intro)
+  then show \<open>infsum_exists f A\<close>
+    by simp
+next
+  assume \<open>infsum_exists f A\<close>
+  then show \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
+    apply (rule_tac infsum_exists_comm_additive[where f=cnj, unfolded o_def])
+    by (auto intro!: additive.intro)
+qed
+
+lemma infsetsum_cnj[simp]: \<open>infsum (\<lambda>x. cnj (f x)) M = cnj (infsum f M)\<close>
+proof (cases \<open>infsum_exists f M\<close>)
+  case True
+  then show ?thesis
+    apply (rule_tac infsum_comm_additive[where f=cnj, unfolded o_def])
+    by (auto intro!: additive.intro)
+next
+  case False
+  then have 1: \<open>infsum f M = 0\<close>
+    by (simp add: infsum_def)
+  from False have \<open>\<not> infsum_exists (\<lambda>x. cnj (f x)) M\<close>
+    by simp
+  then have 2: \<open>infsum (\<lambda>x. cnj (f x)) M = 0\<close>
+    by (simp add: infsum_def)
+  from 1 2 show ?thesis
+    by simp
+qed
+
+lemma infsum_Re: 
+  assumes "infsum_exists f M"
+  shows "infsum (\<lambda>x. Re (f x)) M = Re (infsum f M)"
+  apply (rule infsum_comm_additive[where f=Re, unfolded o_def])
+  using assms by (auto intro!: additive.intro)
+
+lemma infsum_exists_Re: 
+  assumes "infsum_exists f M"
+  shows "infsum_exists (\<lambda>x. Re (f x)) M"
+  apply (rule infsum_exists_comm_additive[where f=Re, unfolded o_def])
+  using assms by (auto intro!: additive.intro)
+
+lemma infsum_Im: 
+  assumes "infsum_exists f M"
+  shows "infsum (\<lambda>x. Im (f x)) M = Im (infsum f M)"
+  apply (rule infsum_comm_additive[where f=Im, unfolded o_def])
+  using assms by (auto intro!: additive.intro)
+
+lemma infsum_exists_Im: 
+  assumes "infsum_exists f M"
+  shows "infsum_exists (\<lambda>x. Im (f x)) M"
+  apply (rule infsum_exists_comm_additive[where f=Im, unfolded o_def])
+  using assms by (auto intro!: additive.intro)
+
+
+lemma infsetsum_0D_complex:
+  fixes f :: "'a \<Rightarrow> complex"
+  assumes "infsum f A = 0"
+    and abs_sum: "infsum_exists f A"
+    and nneg: "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
+    and "x \<in> A"
+  shows "f x = 0"
+proof -
+  have \<open>Im (f x) = 0\<close>
+    apply (rule infsetsum_0D[where A=A])
+    using assms by (auto simp add: abs_sum infsum_exists_Im infsum_Im)
+  moreover have \<open>Re (f x) = 0\<close>
+    apply (rule infsetsum_0D[where A=A])
+    using assms by (auto simp add: abs_sum infsum_exists_Re infsum_Re)
+  ultimately show ?thesis
+    by (simp add: complex_eqI)
+qed
+
+
+text \<open>@{thm infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
+Thus we have a separate corollary for those:\<close>
+
+lemma infsum_mono_neutral_complex:
+  fixes f :: "'a \<Rightarrow> complex"
+  assumes [simp]: "infsum_exists f A"
+    and [simp]: "infsum_exists g B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "infsum f A \<le> infsum g B"
+proof -
+  have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (g x)) B\<close>
+    apply (rule infsum_mono_neutral)
+    using assms(3-5) by (auto simp add: infsum_exists_Re)
+  then have Re: \<open>Re (infsum f A) \<le> Re (infsum g B)\<close>
+    by (metis assms(1-2) infsum_Re)
+  have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (g x)) B\<close>
+    apply (rule infsum_neutral_cong)
+    using assms(3-5) by (auto simp add: infsum_exists_Re)
+  then have Im: \<open>Im (infsum f A) = Im (infsum g B)\<close>
+    by (metis assms(1-2) infsum_Im)
+  from Re Im show ?thesis
+    by auto
+qed
+
+
+lemma infsum_mono_complex:
+  \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm infsum_mono} can be used. But \<^typ>\<open>complex\<close> does not have the right typeclass.\<close>
+  fixes f g :: "'a \<Rightarrow> complex"
+  assumes f_sum: "infsum_exists f A" and g_sum: "infsum_exists g A"
+  assumes leq: "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
+  shows   "infsum f A \<le> infsum g A"
+  by (metis DiffE IntD1 f_sum g_sum infsum_mono_neutral_complex leq)
+
+
+lemma infsetsum_geq0_complex:
+  fixes f :: "'a \<Rightarrow> complex"
+  assumes "infsum_exists f M"
+    and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
+  shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
+  by (metis assms(1) assms(2) infsum_0_simp infsum_ex_0_simp infsum_mono_complex)
+
+lemma infsetsum_cmod:
+  assumes "infsum_exists f M"
+    and fnn: "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
+  shows "infsum (\<lambda>x. cmod (f x)) M = cmod (infsum f M)"
+proof -
+  have \<open>complex_of_real (infsum (\<lambda>x. cmod (f x)) M) = infsum (\<lambda>x. complex_of_real (cmod (f x))) M\<close>
+    apply (rule infsum_comm_additive[symmetric, unfolded o_def])
+    apply auto
+    apply (simp add: additive.intro)
+    by (smt (verit, best) assms(1) cmod_eq_Re fnn infsum_exists_Re infsum_exists_cong less_eq_complex_def zero_complex.simps(1) zero_complex.simps(2))
+  also have \<open>\<dots> = infsum f M\<close>
+    apply (rule infsum_cong)
+    using fnn
+    using cmod_eq_Re complex_is_Real_iff by force
+  finally show ?thesis
+    by (metis abs_of_nonneg infsum_def le_less_trans norm_ge_zero norm_infsum_bound norm_of_real not_le order_refl)
+qed
+
 
 lemma infsum_exists_then_norm_exists_complex:
   fixes f :: \<open>'a \<Rightarrow> complex\<close>
