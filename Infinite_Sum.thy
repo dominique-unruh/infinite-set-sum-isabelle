@@ -756,11 +756,53 @@ proof -
     using upper lower by (rule increasing_tendsto)
 qed
 
-lemma infsum_superconst_infinite:
+lemma infsum_exists_pos_ereal: 
+  assumes \<open>\<And>x. x\<in>S \<Longrightarrow> f x \<ge> 0\<close>
+  shows \<open>infsum_exists (f::_ \<Rightarrow> ereal) S\<close>
+proof -
+  have \<open>infsum_exists (e2ennreal o f) S\<close>
+    by simp
+  then have \<open>infsum_exists (enn2ereal o (e2ennreal o f)) S\<close>
+    apply (rule infsum_exists_comm_additive_general[rotated -1])
+    by (auto simp: continuous_at_enn2ereal)
+  then show \<open>infsum_exists f S\<close>
+    apply (rule infsum_exists_cong[THEN iffD2, rotated])
+    using assms enn2ereal_e2ennreal by auto
+qed
+
+lemma infsum_exists_enat[simp]: \<open>infsum_exists (f::_ \<Rightarrow> enat) S\<close>
+proof -
+  define B where \<open>B = (SUP F\<in>{F. F \<subseteq> S \<and> finite F}. sum f F)\<close>
+
+  have upper: \<open>\<forall>\<^sub>F F in finite_subsets_at_top S. sum f F \<le> B\<close>
+    apply (rule eventually_finite_subsets_at_top_weakI)
+    unfolding B_def
+    by (simp add: SUP_upper)
+  have lower: \<open>\<forall>\<^sub>F n in finite_subsets_at_top S. x < sum f n\<close> if \<open>x < B\<close> for x
+  proof -
+    obtain F where Fx: \<open>sum f F > x\<close> and \<open>F \<subseteq> S\<close> and \<open>finite F\<close>
+      using \<open>x < B\<close> unfolding B_def
+      by (metis (mono_tags, lifting)  less_SUP_iff mem_Collect_eq)
+    have geq: \<open>sum f Y \<ge> sum f F\<close> if \<open>finite Y\<close> and \<open>Y \<supseteq> F\<close> for Y
+      by (simp add: sum_mono2 that(1) that(2))
+    show ?thesis
+      unfolding eventually_finite_subsets_at_top
+      apply (rule exI[of _ F])
+      using \<open>finite F\<close> \<open>F \<subseteq> S\<close> Fx geq by force
+  qed
+  
+  show ?thesis
+    unfolding infsum_exists_def
+    apply (rule exI[of _ B])
+    using upper lower by (rule increasing_tendsto)
+qed
+
+lemma infsum_superconst_infinite_ennreal:
+  fixes f :: \<open>'a \<Rightarrow> ennreal\<close>
   assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
   assumes b: \<open>b > 0\<close>
   assumes \<open>infinite S\<close>
-  shows "infsum f S = (\<infinity>::ennreal)"
+  shows "infsum f S = \<infinity>"
 proof -
   have \<open>(sum f \<longlongrightarrow> \<infinity>) (finite_subsets_at_top S)\<close>
   proof (rule order_tendstoI[rotated], simp)
@@ -789,10 +831,106 @@ proof -
   qed
   then show ?thesis
     unfolding infsum_def 
-    apply (simp add: infsum_exists_ennreal)
     by (simp add: tendsto_Lim)
 qed
 
+lemma infsum_superconst_infinite_ereal:
+  fixes f :: \<open>'a \<Rightarrow> ereal\<close>
+  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
+  assumes b: \<open>b > 0\<close>
+  assumes \<open>infinite S\<close>
+  shows "infsum f S = \<infinity>"
+proof -
+  obtain b' where b': \<open>e2ennreal b' = b\<close> and \<open>b' > 0\<close>
+    using b by blast
+  have *: \<open>infsum (e2ennreal o f) S = \<infinity>\<close>
+    apply (rule infsum_superconst_infinite_ennreal[where b=b'])
+    using assms \<open>b' > 0\<close> b' e2ennreal_mono apply auto
+    by (metis dual_order.strict_iff_order enn2ereal_e2ennreal le_less_linear zero_ennreal_def)
+  have \<open>infsum f S = infsum (enn2ereal o (e2ennreal o f)) S\<close>
+    by (smt (verit, best) b comp_apply dual_order.trans enn2ereal_e2ennreal geqb infsum_cong less_imp_le)
+  also have \<open>\<dots> = enn2ereal \<infinity>\<close>
+    apply (subst infsum_comm_additive_general)
+    using * by (auto simp: continuous_at_enn2ereal)
+  also have \<open>\<dots> = \<infinity>\<close>
+    by simp
+  finally show ?thesis
+    by -
+qed
+
+(* TODO move *)
+lemma ennreal_of_enat_plus[simp]: \<open>ennreal_of_enat (a+b) = ennreal_of_enat a + ennreal_of_enat b\<close>
+  apply (induction a)
+  apply auto
+  by (smt (z3) add.commute add.right_neutral enat.exhaust enat.simps(4) enat.simps(5) ennreal_add_left_cancel ennreal_of_enat_def infinity_ennreal_def of_nat_add of_nat_eq_enat plus_enat_simps(2))
+
+(* TODO move *)
+lemma sum_ennreal_of_enat[simp]: "(\<Sum>i\<in>I. ennreal_of_enat (f i)) = ennreal_of_enat (sum f I)"
+  apply (induction I rule: infinite_finite_induct) 
+  by (auto simp: sum_nonneg)
+
+(* TODO move *)
+lemma isCont_ennreal_of_enat[simp]: \<open>isCont ennreal_of_enat x\<close>
+proof (subst continuous_at_open, intro allI impI, cases \<open>x = \<infinity>\<close>)
+  case True
+  note True[simp]
+
+  thm open_generated_order
+  thm open_left
+
+  fix t assume \<open>open t \<and> ennreal_of_enat x \<in> t\<close>
+  then have \<open>\<exists>y<\<infinity>. {y <.. \<infinity>} \<subseteq> t\<close>
+    apply (rule_tac open_left[where y=0])
+    by auto
+  then obtain y where \<open>{y<..} \<subseteq> t\<close> and \<open>y \<noteq> \<infinity>\<close>
+    apply atomize_elim
+    apply (auto simp: greaterThanAtMost_def)
+    by (metis atMost_iff inf.orderE subsetI top.not_eq_extremum top_greatest)
+
+  from \<open>y \<noteq> \<infinity>\<close>
+  obtain x' where x'y: \<open>ennreal_of_enat x' > y\<close> and \<open>x' \<noteq> \<infinity>\<close>
+    by (metis enat.simps(3) ennreal_Ex_less_of_nat ennreal_of_enat_enat infinity_ennreal_def top.not_eq_extremum)
+  define s where \<open>s = {x'<..}\<close>
+  have \<open>open s\<close>
+    by (simp add: s_def)
+  moreover have \<open>x \<in> s\<close>
+    by (simp add: \<open>x' \<noteq> \<infinity>\<close> s_def)
+  moreover have \<open>ennreal_of_enat z \<in> t\<close> if \<open>z \<in> s\<close> for z
+    by (metis x'y \<open>{y<..} \<subseteq> t\<close> ennreal_of_enat_le_iff greaterThan_iff le_less_trans less_imp_le not_less s_def subsetD that)
+  ultimately show \<open>\<exists>s. open s \<and> x \<in> s \<and> (\<forall>z\<in>s. ennreal_of_enat z \<in> t)\<close>
+    by auto
+next
+  case False
+  fix t assume asm: \<open>open t \<and> ennreal_of_enat x \<in> t\<close>
+  define s where \<open>s = {x}\<close>
+  have \<open>open s\<close>
+    using False open_enat_iff s_def by blast
+  moreover have \<open>x \<in> s\<close>
+    using s_def by auto
+  moreover have \<open>ennreal_of_enat z \<in> t\<close> if \<open>z \<in> s\<close> for z
+    using asm s_def that by blast
+  ultimately show \<open>\<exists>s. open s \<and> x \<in> s \<and> (\<forall>z\<in>s. ennreal_of_enat z \<in> t)\<close>
+    by auto
+qed
+
+
+lemma infsum_superconst_infinite_enat:
+  fixes f :: \<open>'a \<Rightarrow> enat\<close>
+  assumes geqb: \<open>\<And>x. x \<in> S \<Longrightarrow> f x \<ge> b\<close>
+  assumes b: \<open>b > 0\<close>
+  assumes \<open>infinite S\<close>
+  shows "infsum f S = \<infinity>"
+proof -
+  have \<open>ennreal_of_enat (infsum f S) = infsum (ennreal_of_enat o f) S\<close>
+    apply (rule infsum_comm_additive_general[symmetric])
+    by auto
+  also have \<open>\<dots> = \<infinity>\<close>
+    by (metis assms(3) b comp_apply ennreal_of_enat_0 ennreal_of_enat_inj ennreal_of_enat_le_iff geqb infsum_superconst_infinite_ennreal not_gr_zero)
+  also have \<open>\<dots> = ennreal_of_enat \<infinity>\<close>
+    by simp
+  finally show ?thesis
+    by (rule ennreal_of_enat_inj[THEN iffD1])
+qed
 
 subsection \<open>UNSORTED\<close>
 
