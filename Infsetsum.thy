@@ -709,11 +709,14 @@ proof -
   finally show ?thesis by assumption
 qed
 
+text \<open>The following lemma is a strengthening of @{thm infsetsum_Sigma}.
+  It does not require \<^term>\<open>A\<close> and \<^term>\<open>B\<close> to be countable.\<close>
+
 lemma infsetsum_Sigma:
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
   assumes summable: "f abs_summable_on (Sigma A B)"
   shows "infsetsum f (Sigma A B) = infsetsum (\<lambda>x. infsetsum (\<lambda>y. f (x, y)) (B x)) A"
-proof-
+proof -
   from summable have countable_Sigma: "countable {x \<in> Sigma A B. 0 \<noteq> f x}"
     by (rule abs_summable_countable)
   define A' where "A' = fst ` {x \<in> Sigma A B. 0 \<noteq> f x}"
@@ -807,25 +810,14 @@ proof-
     by simp
 qed
 
+text \<open>The following lemma is a strengthening of @{thm infsetsum_Sigma'}.
+  It does not require \<^term>\<open>A\<close> and \<^term>\<open>B\<close> to be countable.\<close>
+
 lemma infsetsum_Sigma':
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
   assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on (Sigma A B)"
-  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) (B x)) A = infsetsum (\<lambda>(x,y). f x y) (Sigma A B)"
+  shows "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) (B x)) A = infsetsum (\<lambda>(x,y). f x y) (Sigma A B)"
   using assms by (subst infsetsum_Sigma) auto
-
-lemma infsetsum_Times:
-  fixes A :: "'a set" and B :: "'b set"
-  assumes summable: "f abs_summable_on (A \<times> B)"
-  shows   "infsetsum f (A \<times> B) = infsetsum (\<lambda>x. infsetsum (\<lambda>y. f (x, y)) B) A"
-  using assms by (subst infsetsum_Sigma) auto
-
-lemma infsetsum_Times':
-  fixes A :: "'a set" and B :: "'b set"
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c :: {banach, second_countable_topology}"
-  assumes summable: "(\<lambda>(x,y). f x y) abs_summable_on (A \<times> B)"
-  shows   "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>(x,y). f x y) (A \<times> B)"
-  using assms by (subst infsetsum_Times) auto
-
 
 lemma infsetsum_swap:
   fixes A :: "'a set" and B :: "'b set"
@@ -838,15 +830,14 @@ proof-
   have bij: "bij_betw (\<lambda>(x, y). (y, x)) (B \<times> A) (A \<times> B)"
     by (auto simp: bij_betw_def inj_on_def)
   have "infsetsum (\<lambda>x. infsetsum (\<lambda>y. f x y) B) A = infsetsum (\<lambda>(x,y). f x y) (A \<times> B)"
-    using summable by (subst infsetsum_Times) auto
+    using summable by (subst infsetsum_Sigma) auto
   also have "\<dots> = infsetsum (\<lambda>(x,y). f y x) (B \<times> A)"
     by (subst infsetsum_reindex_bij_betw[OF bij, of "\<lambda>(x,y). f x y", symmetric])
       (simp_all add: case_prod_unfold)
   also have "\<dots> = infsetsum (\<lambda>y. infsetsum (\<lambda>x. f x y) A) B"
-    using summable' by (subst infsetsum_Times) auto
+    using summable' by (subst infsetsum_Sigma) auto
   finally show ?thesis.
 qed
-
 
 lemma abs_summable_partition:
   fixes T :: "'b set" and I :: "'a set"
@@ -1116,16 +1107,9 @@ proof -
   from assms have "0 = infsetsum f A"
     by simp
   also have "\<dots> = infsetsum f (A-{x}) + infsetsum f {x}"
-  proof (subst infsetsum_Un_disjoint [symmetric])
-    show "f abs_summable_on A - {x}"
-      by simp      
-    show "f abs_summable_on {x}"
-      by simp      
-    show "(A - {x}) \<inter> {x} = {}"
-      by simp      
-    show "infsetsum f A = infsetsum f (A - {x} \<union> {x})"
-      using assms(4) insert_Diff by fastforce      
-  qed
+    apply (subst infsetsum_Un_disjoint [symmetric])
+    apply auto
+    using assms(4) insert_Diff by fastforce      
   also have "\<dots> \<ge> 0 + infsetsum f {x}" (is "_ \<ge> \<dots>")
     using a
     by (smt infsetsum_nonneg nneg)    
@@ -1134,38 +1118,6 @@ proof -
   finally have "f x \<le> 0".
   with nneg[OF \<open>x\<in>A\<close>] show "f x = 0"
     by auto
-qed
-
-
-lemma sum_leq_infsetsum:
-  fixes f :: "_ \<Rightarrow> real"
-  assumes "f abs_summable_on N"
-  and "finite M"
-  and "M \<subseteq> N"
-  and "\<And>x. x\<in>N-M \<Longrightarrow> f x \<ge> 0"
-  shows "sum f M \<le> infsetsum f N"
-proof -
-  have "infsetsum f M \<le> infsetsum f N"
-  proof (rule infsetsum_mono_neutral_left)
-    show "f abs_summable_on M"
-      by (simp add: assms(2))      
-    show "f abs_summable_on N"
-      by (simp add: assms(1))      
-    show "f x \<le> f x"
-      if "x \<in> M"
-      for x :: 'b
-      using that
-      by simp 
-    show "M \<subseteq> N"
-      by (simp add: assms(3))      
-    show "0 \<le> f x"
-      if "x \<in> N - M"
-      for x :: 'b
-      using that
-      by (simp add: assms(4)) 
-  qed
-  thus ?thesis
-    using assms by auto
 qed
 
 lemma infsetsum_cmult_left':
