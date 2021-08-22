@@ -652,9 +652,7 @@ lemma infsum_exists_subset_banach:
   by (metis Cauchy_convergent UNIV_I complete_def convergent_def)
 
 
-(* Rename from here TODO *)
-
-lemma infsum_exists_union_disjoint:
+lemma infsum_exists_finite_union_disjoint:
   fixes f :: "'a \<Rightarrow> 'b::{topological_monoid_add, t2_space, comm_monoid_add}"
   assumes finite: \<open>finite A\<close>
   assumes conv: \<open>\<And>a. a \<in> A \<Longrightarrow> infsum_exists f (B a)\<close>
@@ -681,20 +679,27 @@ next
     apply (subst insert.IH) using assms insert by auto
   also have \<open>\<dots> = infsum f (B x \<union> \<Union> (B ` F))\<close>
     apply (rule infsum_Un_disjoint[symmetric])
-    using insert.prems insert.hyps by (auto simp: infsum_exists_union_disjoint)
+    using insert.prems insert.hyps by (auto simp: infsum_exists_finite_union_disjoint)
   also have \<open>\<dots> = infsum f (\<Union>a\<in>insert x F. B a)\<close>
     by auto
   finally show ?case
     by -
 qed
 
+
+text \<open>\<open>infsum_additive_general\<close> and \<open>infsum_additive\<close> state that the infinite sum commutes with
+  a continuous additive function. \<open>infsum_additive_general\<close> is stated more generally by avoiding
+  the constant \<^const>\<open>additive\<close>. That constant introduces an additional sort constraint
+  (group instead of monoid). For example, extended reals (\<^typ>\<open>ereal\<close>, \<^typ>\<open>ennreal\<close>) are not covered
+  by \<open>infsum_additive\<close>.\<close>
+
 lemma 
   assumes f_sum: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> S \<Longrightarrow> sum (f o g) F = f (sum g F)\<close>
       \<comment> \<open>Not using \<^const>\<open>additive\<close> because it would add sort constraint \<^class>\<open>ab_group_add\<close>\<close>
   assumes \<open>isCont f (infsum g S)\<close>
   assumes \<open>infsum_exists g S\<close>
-  shows infsum_additive0_ex: \<open>infsum_exists (f o g) S\<close> 
-    and infsum_additive0: \<open>infsum (f o g) S = f (infsum g S)\<close>
+  shows infsum_exists_comm_additive_general: \<open>infsum_exists (f o g) S\<close> 
+    and infsum_comm_additive_general: \<open>infsum (f o g) S = f (infsum g S)\<close>
 proof -
   have \<open>(sum g \<longlongrightarrow> infsum g S) (finite_subsets_at_top S)\<close>
     by (simp add: assms(3) infsum_tendsto)
@@ -713,10 +718,14 @@ lemma
   assumes \<open>additive f\<close>
   assumes \<open>isCont f (infsum g S)\<close>
   assumes \<open>infsum_exists g S\<close>
-  shows infsum_additive_ex: \<open>infsum_exists (f o g) S\<close> 
-    and infsum_additive: \<open>infsum (f o g) S = f (infsum g S)\<close>
-   apply (rule infsum_additive0_ex; auto simp: assms additive.sum)
-  by (rule infsum_additive0; auto simp: assms additive.sum)
+  shows infsum_exists_comm_additive: \<open>infsum_exists (f o g) S\<close> 
+    and infsum_comm_additive: \<open>infsum (f o g) S = f (infsum g S)\<close>
+   apply (rule infsum_exists_comm_additive_general; auto simp: assms additive.sum)
+  by (rule infsum_comm_additive_general; auto simp: assms additive.sum)
+
+
+(* Rename from here TODO *)
+
 
 subsection \<open>Infinite sum over specific monoids\<close>
 
@@ -793,14 +802,14 @@ lemma infsum_exists_iff[simp]:
 proof auto
   assume assm: \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
   then have \<open>infsum_exists (\<lambda>x. cnj (cnj (f x))) A\<close>
-    apply (rule_tac infsum_additive_ex[where f=cnj, unfolded o_def])
+    apply (rule_tac infsum_exists_comm_additive[where f=cnj, unfolded o_def])
     by (auto intro!: additive.intro)
   then show \<open>infsum_exists f A\<close>
     by simp
 next
   assume \<open>infsum_exists f A\<close>
   then show \<open>infsum_exists (\<lambda>x. cnj (f x)) A\<close>
-    apply (rule_tac infsum_additive_ex[where f=cnj, unfolded o_def])
+    apply (rule_tac infsum_exists_comm_additive[where f=cnj, unfolded o_def])
     by (auto intro!: additive.intro)
 qed
 
@@ -808,7 +817,7 @@ lemma infsetsum_cnj[simp]: \<open>infsum (\<lambda>x. cnj (f x)) M = cnj (infsum
 proof (cases \<open>infsum_exists f M\<close>)
   case True
   then show ?thesis
-    apply (rule_tac infsum_additive[where f=cnj, unfolded o_def])
+    apply (rule_tac infsum_comm_additive[where f=cnj, unfolded o_def])
     by (auto intro!: additive.intro)
 next
   case False
@@ -825,25 +834,25 @@ qed
 lemma infsum_Re: 
   assumes "infsum_exists f M"
   shows "infsum (\<lambda>x. Re (f x)) M = Re (infsum f M)"
-  apply (rule infsum_additive[where f=Re, unfolded o_def])
+  apply (rule infsum_comm_additive[where f=Re, unfolded o_def])
   using assms by (auto intro!: additive.intro)
 
 lemma infsum_exists_Re: 
   assumes "infsum_exists f M"
   shows "infsum_exists (\<lambda>x. Re (f x)) M"
-  apply (rule infsum_additive_ex[where f=Re, unfolded o_def])
+  apply (rule infsum_exists_comm_additive[where f=Re, unfolded o_def])
   using assms by (auto intro!: additive.intro)
 
 lemma infsum_Im: 
   assumes "infsum_exists f M"
   shows "infsum (\<lambda>x. Im (f x)) M = Im (infsum f M)"
-  apply (rule infsum_additive[where f=Im, unfolded o_def])
+  apply (rule infsum_comm_additive[where f=Im, unfolded o_def])
   using assms by (auto intro!: additive.intro)
 
 lemma infsum_exists_Im: 
   assumes "infsum_exists f M"
   shows "infsum_exists (\<lambda>x. Im (f x)) M"
-  apply (rule infsum_additive_ex[where f=Im, unfolded o_def])
+  apply (rule infsum_exists_comm_additive[where f=Im, unfolded o_def])
   using assms by (auto intro!: additive.intro)
 
 lemma infsum_mono_complex:
@@ -960,7 +969,7 @@ lemma infsum_nonneg_is_SUPREMUM_ennreal:
   shows "ennreal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ennreal (sum f F)))"
 proof -
   have \<open>ennreal (infsum f A) = infsum (ennreal o f) A\<close>
-    apply (rule infsum_additive0[symmetric])
+    apply (rule infsum_comm_additive_general[symmetric])
     apply (subst sum_ennreal[symmetric])
     using assms by auto
   also have \<open>\<dots> = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ennreal (sum f F)))\<close>
@@ -979,7 +988,7 @@ lemma infsum_nonneg_is_SUPREMUM_ereal:
   shows "ereal (infsum f A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))"
 proof -
   have \<open>ereal (infsum f A) = infsum (ereal o f) A\<close>
-    apply (rule infsum_additive0[symmetric])
+    apply (rule infsum_comm_additive_general[symmetric])
     using assms by auto
   also have \<open>\<dots> = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. (ereal (sum f F)))\<close>
     apply (subst pos_infsum_complete)
@@ -1042,7 +1051,7 @@ lemma infsetsum_cmod:
   shows "infsum (\<lambda>x. cmod (f x)) M = cmod (infsum f M)"
 proof -
   have \<open>complex_of_real (infsum (\<lambda>x. cmod (f x)) M) = infsum (\<lambda>x. complex_of_real (cmod (f x))) M\<close>
-    apply (rule infsum_additive[symmetric, unfolded o_def])
+    apply (rule infsum_comm_additive[symmetric, unfolded o_def])
     apply auto
     apply (simp add: additive.intro)
     by (smt (verit, best) assms(1) cmod_eq_Re fnn infsum_exists_Re infsum_exists_cong less_eq_complex_def zero_complex.simps(1) zero_complex.simps(2))
