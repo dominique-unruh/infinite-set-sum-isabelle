@@ -119,7 +119,7 @@ qed
 
 lemma infsum_exists_cong: 
   assumes "\<And>x. x\<in>A \<Longrightarrow> f x = g x"
-  shows "infsum_exists f A = infsum_exists g A"
+  shows "infsum_exists f A \<longleftrightarrow> infsum_exists g A"
   by (metis (mono_tags, lifting) DiffE IntD1 infsum_exists_neutral_cong assms)
 
 lemma infsum_cong:
@@ -279,9 +279,7 @@ lemma infsum_finite[simp]:
   shows "infsum f F = sum f F"
   using assms by (auto intro: tendsto_Lim simp: finite_subsets_at_top_finite infsum_def principal_eq_bot_iff tendsto_principal_singleton)
 
-(* Rename from here TODO *)
-
-lemma infsum_approx_sum:
+lemma infsum_finite_approximation:
   fixes f :: "'a \<Rightarrow> 'b::{comm_monoid_add,metric_space}"
   assumes "infsum_exists f A" and "\<epsilon> > 0"
   shows "\<exists>F. finite F \<and> F \<subseteq> A \<and> dist (sum f F) (infsum f A) \<le> \<epsilon>"
@@ -308,6 +306,77 @@ proof -
         \<open>\<forall>\<^sub>F F in finite_subsets_at_top A. dist (sum f F) (infsum f A) < \<epsilon>\<close>)
 qed
 
+(* Rename from here TODO *)
+
+
+lemma infset_norm_implies_exists:
+  fixes f :: \<open>'a \<Rightarrow> 'b :: banach\<close>
+  assumes \<open>infsum_exists (\<lambda>x. norm (f x)) A\<close>
+  shows \<open>infsum_exists f A\<close>
+proof -
+  from assms obtain L where lim: \<open>(sum (\<lambda>x. norm (f x)) \<longlongrightarrow> L) (finite_subsets_at_top A)\<close>
+    using infsum_exists_def by blast
+  then have *: \<open>cauchy_filter (filtermap (sum (\<lambda>x. norm (f x))) (finite_subsets_at_top A))\<close>
+    by (auto intro!: nhds_imp_cauchy_filter simp: filterlim_def)
+  have \<open>\<exists>P. eventually P (finite_subsets_at_top A) \<and>
+              (\<forall>F F'. P F \<and> P F' \<longrightarrow> dist (sum f F) (sum f F') < e)\<close> if \<open>e>0\<close> for e
+  proof -
+    define d P where \<open>d = e/4\<close> and \<open>P F \<longleftrightarrow> finite F \<and> F \<subseteq> A \<and> dist (sum (\<lambda>x. norm (f x)) F) L < d\<close> for F
+    then have \<open>d > 0\<close>
+      by (simp add: d_def that)
+    have ev_P: \<open>eventually P (finite_subsets_at_top A)\<close>
+      using lim
+      by (auto simp add: P_def[abs_def] \<open>0 < d\<close> eventually_conj_iff eventually_finite_subsets_at_top_weakI tendsto_iff)
+
+    moreover have \<open>dist (sum f F1) (sum f F2) < e\<close> if \<open>P F1\<close> and \<open>P F2\<close> for F1 F2
+    proof -
+      from ev_P
+      obtain F' where \<open>finite F'\<close> and \<open>F' \<subseteq> A\<close> and P_sup_F': \<open>finite F \<and> F \<supseteq> F' \<and> F \<subseteq> A \<Longrightarrow> P F\<close> for F
+        apply atomize_elim by (simp add: eventually_finite_subsets_at_top)
+      define F where \<open>F = F' \<union> F1 \<union> F2\<close>
+      have \<open>finite F\<close> and \<open>F \<subseteq> A\<close>
+        using F_def P_def[abs_def] that \<open>finite F'\<close> \<open>F' \<subseteq> A\<close> by auto
+      have dist_F: \<open>dist (sum (\<lambda>x. norm (f x)) F) L < d\<close>
+        by (metis F_def \<open>F \<subseteq> A\<close> P_def P_sup_F' \<open>finite F\<close> le_supE order_refl)
+
+      from dist_F have \<open>dist (sum (\<lambda>x. norm (f x)) F) (sum (\<lambda>x. norm (f x)) F2) < 2*d\<close>
+        by (smt (z3) P_def dist_norm real_norm_def that(2))
+      then have \<open>norm (sum (\<lambda>x. norm (f x)) (F-F2)) < 2*d\<close>
+        unfolding dist_norm
+        by (metis F_def \<open>finite F\<close> sum_diff sup_commute sup_ge1)
+      then have \<open>norm (sum f (F-F2)) < 2*d\<close>
+        by (smt (verit, ccfv_threshold) real_norm_def sum_norm_le)
+      then have dist_F_F2: \<open>dist (sum f F) (sum f F2) < 2*d\<close>
+        by (metis F_def \<open>finite F\<close> dist_norm sum_diff sup_commute sup_ge1)
+
+      from dist_F have \<open>dist (sum (\<lambda>x. norm (f x)) F) (sum (\<lambda>x. norm (f x)) F1) < 2*d\<close>
+        by (smt (z3) P_def dist_norm real_norm_def that(1))
+      then have \<open>norm (sum (\<lambda>x. norm (f x)) (F-F1)) < 2*d\<close>
+        unfolding dist_norm
+        by (metis F_def \<open>finite F\<close> inf_sup_ord(3) order_trans sum_diff sup_ge2)
+      then have \<open>norm (sum f (F-F1)) < 2*d\<close>
+        by (smt (verit, ccfv_threshold) real_norm_def sum_norm_le)
+      then have dist_F_F1: \<open>dist (sum f F) (sum f F1) < 2*d\<close>
+        by (metis F_def \<open>finite F\<close> dist_norm inf_sup_ord(3) le_supE sum_diff)
+
+      from dist_F_F2 dist_F_F1 show \<open>dist (sum f F1) (sum f F2) < e\<close>
+        unfolding d_def apply auto
+        by (meson dist_triangle_half_r less_divide_eq_numeral1(1))
+    qed
+    then show ?thesis
+      using ev_P by blast
+  qed
+  then have \<open>cauchy_filter (filtermap (sum f) (finite_subsets_at_top A))\<close>
+    by (simp add: cauchy_filter_metric_filtermap)
+  then obtain L' where \<open>(sum f \<longlongrightarrow> L') (finite_subsets_at_top A)\<close>
+    apply atomize_elim unfolding filterlim_def
+    apply (rule complete_uniform[where S=UNIV, simplified, THEN iffD1, rule_format])
+      apply (auto simp add: filtermap_bot_iff)
+    by (meson Cauchy_convergent UNIV_I complete_def convergent_def)
+  then show ?thesis
+    using infsum_exists_def by blast
+qed
+
 lemma norm_infsum_bound:
   fixes f :: "'b \<Rightarrow> 'a::real_normed_vector"
     and A :: "'b set"
@@ -318,7 +387,7 @@ proof (cases "infsum_exists f A")
   have "norm (infsum f A) \<le> (infsum (\<lambda>x. norm (f x)) A) + \<epsilon>" if "\<epsilon>>0" for \<epsilon>
   proof-
     have "\<exists>F. norm (infsum f A - sum f F) \<le> \<epsilon> \<and> finite F \<and> F \<subseteq> A"
-      using infsum_approx_sum[where A=A and f=f and \<epsilon>="\<epsilon>"] a1 True \<open>0 < \<epsilon>\<close>
+      using infsum_finite_approximation[where A=A and f=f and \<epsilon>="\<epsilon>"] a1 True \<open>0 < \<epsilon>\<close>
       by (metis dist_commute dist_norm)
     then obtain F where "norm (infsum f A - sum f F) \<le> \<epsilon>"
       and "finite F" and "F \<subseteq> A"
@@ -833,41 +902,32 @@ proof -
     by auto
 qed
 
-(* lemma infsetsum_subset_real:
-  fixes f :: "'a \<Rightarrow> real"
-  assumes "infsum_exists f B" and "A \<subseteq> B" and "\<And>x. x \<in> B - A \<Longrightarrow> f x \<ge> 0"
-  shows "infsum f A \<le> infsum f B"
-    \<comment> \<open>Existence of \<^term>\<open>infsum f A\<close> follows from @{thm infsum_exists_set_mono_banach}\<close>
-proof -
-  have *: \<open>infsum_exists f A\<close>
-    using \<open>infsum_exists f B\<close> \<open>A \<subseteq> B\<close> by (rule infsum_exists_set_mono_banach)
-  show ?thesis
-    apply (rule infsum_mono_set)
-    using assms * by auto
-qed *)
+text \<open>@{thm infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
+Thus we have a separate corollary for those:\<close>
 
-(* TODO: Replace by mono_neutral style theorem *)
-lemma infsetsum_subset_complex:
+lemma infsum_mono_neutral_complex:
   fixes f :: "'a \<Rightarrow> complex"
-  assumes "infsum_exists f B" and "A \<subseteq> B" and pos: "\<And>x. x \<in> B - A \<Longrightarrow> f x \<ge> 0"
-  shows "infsum f A \<le> infsum f B"
-    \<comment> \<open>Existence of \<^term>\<open>infsum f A\<close> follows from @{thm infsum_exists_set_mono_banach}\<close>
-  sorry
-(* proof -
-  have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (f x)) B\<close>
-    apply (rule infsum_mono_set)
-    using assms infsum_exists_Re apply auto
-    using infsum_exists_set_mono_banach by blast
-  then have Re: \<open>Re (infsum f A) \<le> Re (infsum f B)\<close>
-    by (metis assms(1) assms(2) infsum_Re infsum_exists_set_mono_banach)
-  have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (f x)) B\<close>
+  assumes [simp]: "infsum_exists f A"
+    and [simp]: "infsum_exists g B"
+  assumes \<open>\<And>x. x \<in> A\<inter>B \<Longrightarrow> f x \<le> g x\<close>
+  assumes \<open>\<And>x. x \<in> A-B \<Longrightarrow> f x \<le> 0\<close>
+  assumes \<open>\<And>x. x \<in> B-A \<Longrightarrow> g x \<ge> 0\<close>
+  shows "infsum f A \<le> infsum g B"
+proof -
+  have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (g x)) B\<close>
+    apply (rule infsum_mono_neutral)
+    using assms(3-5) by (auto simp add: infsum_exists_Re)
+  then have Re: \<open>Re (infsum f A) \<le> Re (infsum g B)\<close>
+    by (metis assms(1-2) infsum_Re)
+  have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (g x)) B\<close>
     apply (rule infsum_neutral_cong)
-    using pos assms by auto
-  then have Im: \<open>Im (infsum f A) = Im (infsum f B)\<close>
-    by (metis assms(1) assms(2) infsum_Im infsum_exists_set_mono_banach)
+    using assms(3-5) by (auto simp add: infsum_exists_Re)
+  then have Im: \<open>Im (infsum f A) = Im (infsum g B)\<close>
+    by (metis assms(1-2) infsum_Im)
   from Re Im show ?thesis
     by auto
-qed *)
+qed
+
 
 lemma
   fixes f :: \<open>'a \<Rightarrow> 'b :: {conditionally_complete_linorder, ordered_comm_monoid_add, linorder_topology}\<close>
@@ -1272,75 +1332,6 @@ qed
 
 (* TODO: variants of infsum_swap (_metric, _norm, _banach) *)
 
-(* TODO: use this in Infsum_Infsetsum, too *)
-lemma infset_norm_implies_exists:
-  fixes f :: \<open>'a \<Rightarrow> 'b :: banach\<close>
-  assumes \<open>infsum_exists (\<lambda>x. norm (f x)) A\<close>
-  shows \<open>infsum_exists f A\<close>
-proof -
-  from assms obtain L where lim: \<open>(sum (\<lambda>x. norm (f x)) \<longlongrightarrow> L) (finite_subsets_at_top A)\<close>
-    using infsum_exists_def by blast
-  then have *: \<open>cauchy_filter (filtermap (sum (\<lambda>x. norm (f x))) (finite_subsets_at_top A))\<close>
-    by (auto intro!: nhds_imp_cauchy_filter simp: filterlim_def)
-  have \<open>\<exists>P. eventually P (finite_subsets_at_top A) \<and>
-              (\<forall>F F'. P F \<and> P F' \<longrightarrow> dist (sum f F) (sum f F') < e)\<close> if \<open>e>0\<close> for e
-  proof -
-    define d P where \<open>d = e/4\<close> and \<open>P F \<longleftrightarrow> finite F \<and> F \<subseteq> A \<and> dist (sum (\<lambda>x. norm (f x)) F) L < d\<close> for F
-    then have \<open>d > 0\<close>
-      by (simp add: d_def that)
-    have ev_P: \<open>eventually P (finite_subsets_at_top A)\<close>
-      using lim
-      by (auto simp add: P_def[abs_def] \<open>0 < d\<close> eventually_conj_iff eventually_finite_subsets_at_top_weakI tendsto_iff)
-
-    moreover have \<open>dist (sum f F1) (sum f F2) < e\<close> if \<open>P F1\<close> and \<open>P F2\<close> for F1 F2
-    proof -
-      from ev_P
-      obtain F' where \<open>finite F'\<close> and \<open>F' \<subseteq> A\<close> and P_sup_F': \<open>finite F \<and> F \<supseteq> F' \<and> F \<subseteq> A \<Longrightarrow> P F\<close> for F
-        apply atomize_elim by (simp add: eventually_finite_subsets_at_top)
-      define F where \<open>F = F' \<union> F1 \<union> F2\<close>
-      have \<open>finite F\<close> and \<open>F \<subseteq> A\<close>
-        using F_def P_def[abs_def] that \<open>finite F'\<close> \<open>F' \<subseteq> A\<close> by auto
-      have dist_F: \<open>dist (sum (\<lambda>x. norm (f x)) F) L < d\<close>
-        by (metis F_def \<open>F \<subseteq> A\<close> P_def P_sup_F' \<open>finite F\<close> le_supE order_refl)
-
-      from dist_F have \<open>dist (sum (\<lambda>x. norm (f x)) F) (sum (\<lambda>x. norm (f x)) F2) < 2*d\<close>
-        by (smt (z3) P_def dist_norm real_norm_def that(2))
-      then have \<open>norm (sum (\<lambda>x. norm (f x)) (F-F2)) < 2*d\<close>
-        unfolding dist_norm
-        by (metis F_def \<open>finite F\<close> sum_diff sup_commute sup_ge1)
-      then have \<open>norm (sum f (F-F2)) < 2*d\<close>
-        by (smt (verit, ccfv_threshold) real_norm_def sum_norm_le)
-      then have dist_F_F2: \<open>dist (sum f F) (sum f F2) < 2*d\<close>
-        by (metis F_def \<open>finite F\<close> dist_norm sum_diff sup_commute sup_ge1)
-
-      from dist_F have \<open>dist (sum (\<lambda>x. norm (f x)) F) (sum (\<lambda>x. norm (f x)) F1) < 2*d\<close>
-        by (smt (z3) P_def dist_norm real_norm_def that(1))
-      then have \<open>norm (sum (\<lambda>x. norm (f x)) (F-F1)) < 2*d\<close>
-        unfolding dist_norm
-        by (metis F_def \<open>finite F\<close> inf_sup_ord(3) order_trans sum_diff sup_ge2)
-      then have \<open>norm (sum f (F-F1)) < 2*d\<close>
-        by (smt (verit, ccfv_threshold) real_norm_def sum_norm_le)
-      then have dist_F_F1: \<open>dist (sum f F) (sum f F1) < 2*d\<close>
-        by (metis F_def \<open>finite F\<close> dist_norm inf_sup_ord(3) le_supE sum_diff)
-
-      from dist_F_F2 dist_F_F1 show \<open>dist (sum f F1) (sum f F2) < e\<close>
-        unfolding d_def apply auto
-        by (meson dist_triangle_half_r less_divide_eq_numeral1(1))
-    qed
-    then show ?thesis
-      using ev_P by blast
-  qed
-  then have \<open>cauchy_filter (filtermap (sum f) (finite_subsets_at_top A))\<close>
-    by (simp add: cauchy_filter_metric_filtermap)
-  then obtain L' where \<open>(sum f \<longlongrightarrow> L') (finite_subsets_at_top A)\<close>
-    apply atomize_elim unfolding filterlim_def
-    apply (rule complete_uniform[where S=UNIV, simplified, THEN iffD1, rule_format])
-      apply (auto simp add: filtermap_bot_iff)
-    by (meson Cauchy_convergent UNIV_I complete_def convergent_def)
-  then show ?thesis
-    using infsum_exists_def by blast
-qed
-
 lemma infsetsum_0D:
   fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add,ordered_ab_group_add,linorder_topology}"
   assumes "infsum f A = 0"
@@ -1408,7 +1399,7 @@ lemma sum_leq_infsetsum_complex:
   and "M \<subseteq> N"
   and "\<And>x. x\<in>N-M \<Longrightarrow> f x \<ge> 0"
   shows "sum f M \<le> infsum f N"
-  by (metis assms infsetsum_subset_complex infsum_finite)
+  by (smt (verit, best) DiffD1 DiffD2 assms(1) assms(2) assms(3) assms(4) eq_refl infsum_exists_set_mono_banach infsum_finite infsum_mono_neutral_complex subset_eq)
 
 lemma infsetsum_cmult_left:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
@@ -1570,6 +1561,75 @@ next
     ultimately show ?thesis
       unfolding infsum_def by simp
   qed
+qed
+
+lemma
+  fixes f :: \<open>'a \<Rightarrow> 'b::{topological_ab_group_add,t2_space}\<close>
+  shows infsum_exists_uminus: \<open>infsum_exists (\<lambda>x. - f x) A \<longleftrightarrow> infsum_exists f A\<close> (is ?thesis1)
+    and infsum_uminus: \<open>infsum (\<lambda>x. - f x) A = - infsum f A\<close> (is ?thesis2)
+proof -
+  define n where \<open>n x = - f x\<close> for x
+  have *: \<open>(sum n \<longlongrightarrow> -l) (finite_subsets_at_top A) \<longleftrightarrow> (sum f \<longlongrightarrow> l) (finite_subsets_at_top A)\<close> for l
+    by (auto simp add: n_def[abs_def] sum_negf[abs_def] tendsto_minus_cancel_left)
+  from * show [simp]: ?thesis1
+    by (metis (full_types) n_def add.inverse_inverse infsum_exists_cong infsum_exists_def)
+  from * show ?thesis2
+    apply (auto simp add: infsum_def n_def[abs_def])
+    using finite_subsets_at_top_neq_bot infsum_exists_def tendsto_Lim by blast
+qed
+
+lemma infsum_exists_then_norm_exists_real:
+  fixes f :: \<open>'a \<Rightarrow> real\<close>
+  assumes \<open>infsum_exists f A\<close>
+  shows \<open>infsum_exists (\<lambda>x. norm (f x)) A\<close>
+proof -
+  define n A\<^sub>p A\<^sub>n
+    where \<open>n x = norm (f x)\<close> and \<open>A\<^sub>p = {x\<in>A. f x \<ge> 0}\<close> and \<open>A\<^sub>n = {x\<in>A. f x < 0}\<close> for x
+  have [simp]: \<open>A\<^sub>p \<union> A\<^sub>n = A\<close> \<open>A\<^sub>p \<inter> A\<^sub>n = {}\<close>
+    by (auto simp: A\<^sub>p_def A\<^sub>n_def)
+  from assms have [simp]: \<open>infsum_exists f A\<^sub>p\<close> \<open>infsum_exists f A\<^sub>n\<close>
+    using A\<^sub>p_def A\<^sub>n_def infsum_exists_set_mono_banach by fastforce+
+  then have [simp]: \<open>infsum_exists n A\<^sub>p\<close>
+    apply (subst infsum_exists_cong[where g=f])
+    by (simp_all add: A\<^sub>p_def n_def)
+  moreover have [simp]: \<open>infsum_exists n A\<^sub>n\<close>
+    apply (subst infsum_exists_cong[where g=\<open>\<lambda>x. - f x\<close>])
+     apply (simp add: A\<^sub>n_def n_def[abs_def])
+    by (simp add: infsum_exists_uminus)
+  ultimately have [simp]: \<open>infsum_exists n (A\<^sub>p \<union> A\<^sub>n)\<close>
+    apply (rule infsum_exists_Un_disjoint) by simp
+  then show \<open>infsum_exists n A\<close>
+    by simp
+qed
+
+lemma infsum_exists_then_norm_exists_complex:
+  fixes f :: \<open>'a \<Rightarrow> complex\<close>
+  assumes \<open>infsum_exists f A\<close>
+  shows \<open>infsum_exists (\<lambda>x. norm (f x)) A\<close>
+proof -
+  define i r ni nr n where \<open>i x = Im (f x)\<close> and \<open>r x = Re (f x)\<close>
+    and \<open>ni x = norm (i x)\<close> and \<open>nr x = norm (r x)\<close> and \<open>n x = norm (f x)\<close> for x
+  from assms have \<open>infsum_exists i A\<close>
+    by (simp add: assms i_def[abs_def] infsum_exists_Im)
+  then have [simp]: \<open>infsum_exists ni A\<close>
+    using ni_def[abs_def] infsum_exists_then_norm_exists_real by force
+
+  from assms have \<open>infsum_exists r A\<close>
+    by (simp add: assms r_def[abs_def] infsum_exists_Re)
+  then have [simp]: \<open>infsum_exists nr A\<close>
+    by (metis nr_def infsum_exists_cong infsum_exists_then_norm_exists_real)
+
+  have n_sum: \<open>n x \<le> nr x + ni x\<close> for x
+    by (simp add: n_def nr_def ni_def r_def i_def cmod_le)
+
+  have *: \<open>infsum_exists (\<lambda>x. nr x + ni x) A\<close>
+    apply (rule infsum_exists_add) by auto
+  show \<open>infsum_exists n A\<close>
+    apply (rule pos_infsum_exists)
+     apply (simp add: n_def)
+    apply (rule bdd_aboveI[where M=\<open>infsum (\<lambda>x. nr x + ni x) A\<close>])
+    apply auto
+    by (smt (verit, ccfv_SIG) * ni_def[abs_def] nr_def[abs_def] n_sum norm_ge_zero sum_leq_infsetsum sum_mono)    
 qed
 
 end

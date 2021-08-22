@@ -145,20 +145,9 @@ proof -
       unfolding F_def
       using leq_eps by linarith
     have "infsum (\<lambda>x. norm (f x)) (A - (F1 \<union> F2))
-    \<le> infsum (\<lambda>x. norm (f x)) (A - F2)"
-    proof (rule infsum_mono_set)
-      show "0 \<le> norm (f x)"
-        if "x \<in> A - F2 - (A - (F1 \<union> F2))"
-        for x :: 'a
-        using that
-        by simp 
-      show "A - (F1 \<union> F2) \<subseteq> A - F2"
-        by (simp add: Diff_mono)        
-      show "infsum_exists (\<lambda>x. norm (f x)) (A - (F1 \<union> F2))"
-        using F_def conv_sum_norm finF infsum_exists_cofin_subset by blast        
-      show "infsum_exists (\<lambda>x. norm (f x)) (A - F2)"
-        by (simp add: finF2 infsum_exists_cofin_subset)        
-    qed
+          \<le> infsum (\<lambda>x. norm (f x)) (A - F2)"
+      apply (rule infsum_mono_neutral)
+      using finF by (auto simp add: finF2 infsum_exists_cofin_subset F_def)
     hence leq_eps': "infsum (\<lambda>x. norm (f x)) (A-F) \<le> \<delta>"
       unfolding F_def 
       by (rule order.trans[OF _ leq_eps'])
