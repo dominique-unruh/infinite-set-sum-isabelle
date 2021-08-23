@@ -1,9 +1,13 @@
+section \<open>Comparing the definitions\<close>
+
+(* TODO intro text *)
+
 theory Infsetsum_Infsum
   imports Infsetsum Infinite_Sum
 begin
 
 text \<open>The following theorem relates \<^const>\<open>abs_summable_on\<close> with \<^const>\<open>infsum_exists\<close>.
-  Note that while this theorem expresses an equivalence, the notion on the lhs is more general
+  Note that while this theorem expresses an equivalence, thesection notion on the lhs is more general
   nonetheless because it applies to a wider range of types. (The rhs requires second countable
   Banach spaces while the lhs is well-defined on arbitrary real vector spaces.)\<close>
 

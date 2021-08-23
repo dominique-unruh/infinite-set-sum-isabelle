@@ -1,3 +1,5 @@
+section \<open>Infinite sums as defined by Isabelle\<close>
+
 theory Infsetsum
   imports "HOL-Analysis.Infinite_Set_Sum"
     Jordan_Normal_Form.Conjugate
@@ -5,6 +7,9 @@ theory Infsetsum
                If we define our own instantiation, it would be impossible to load both
                \<^session>\<open>Jordan_Normal_Form\<close> and this theory.\<close>
 begin
+
+text \<open>This theory proves various facts about \<^const>\<open>infsetsum\<close>, the existing definition of 
+  infinite sums in the Isabelle standard library. Those facts are not related to our new definition.\<close>
 
 lemma abs_summable_finiteI0:
   assumes "\<And>F. finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum (\<lambda>x. norm (f x)) F \<le> B"

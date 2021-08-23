@@ -1,3 +1,11 @@
+section \<open>Infinite sums\<close>
+
+(* TODO: intro text *)
+
+(* TODO: also overall intro and abstract *)
+
+(* TODO: @{thm ...} is not the right thing for fact references *)
+
 theory Infinite_Sum
   imports
     Infinite_Sum_Misc
@@ -9,7 +17,7 @@ theory Infinite_Sum
                \<^session>\<open>Jordan_Normal_Form\<close> and this theory.\<close>
 begin
 
-subsection\<open>Definition and syntax\<close>
+subsection \<open>Definition and syntax\<close>
 
 definition infsum_exists :: "('a \<Rightarrow> 'b::{comm_monoid_add,t2_space}) \<Rightarrow> 'a set \<Rightarrow> bool" where
   "infsum_exists f A = (\<exists>x. (sum f \<longlongrightarrow> x) (finite_subsets_at_top A))"
@@ -18,7 +26,7 @@ definition infsum :: "('a \<Rightarrow> 'b::{comm_monoid_add,t2_space}) \<Righta
   "infsum f A = (if infsum_exists f A then Lim (finite_subsets_at_top A) (sum f) else 0)"
 
 text \<open>The following code for the syntax of \<^const>\<open>infsum\<close> is taken with minor modification
-      from Isabelle2021, Infinite_Set_Sum.thy\<close>
+      from Isabelle2021, \<open>Infinite_Set_Sum.thy\<close>\<close>
 syntax
   "_infsum" :: "pttrn \<Rightarrow> 'a set \<Rightarrow> 'b \<Rightarrow> 'b::{comm_monoid_add, t2_space}"
   ("(2\<Sum>\<^sub>\<infinity>_\<in>_./ _)" [0, 51, 10] 10)
@@ -546,19 +554,18 @@ proof -
 qed
 
 
-text \<open>The following lemma indeed needs a complete space (as formalized by the premise \<^term>\<open>complete UNIV\<close>.
+text \<open>The following lemma indeed needs a complete space (as formalized by the premise \<^term>\<open>complete UNIV\<close>).
   The following two counterexamples show this:
-  \begin{itemize}
+
   \<^item> Consider the real vector space $V$ of sequences with finite support, and with the $\ell_2$-norm (sum of squares).
-  Let $e_i$ denote the sequence with a $1$ at position $i$.
-  Let $f : \<int>\to V$ be defined as $f(n) := e_{\lvert n\rvert} / n$ (with $f(0) := 0$).
-  We have that $\sum_{\<int>} f = 0$ (it even converges absolutely). 
-  But $\sum_{\<nat>} f$ does not exist (it would converge against a sequence with infinite support).
-  
+    Let $e_i$ denote the sequence with a $1$ at position $i$.
+    Let $f : \mathbb Z \to V$ be defined as $f(n) := e_{\lvert n\rvert} / n$ (with $f(0) := 0$).
+    We have that $\sum_{\mathbb Z} f = 0$ (it even converges absolutely). 
+    But $\sum_{\mathbb N} f$ does not exist (it would converge against a sequence with infinite support).
+
   \<^item> Let f be a positive rational valued function such that $\sum_B f$ is $\sqrt 2$ and $\sum_A f$ is 1 (over the reals, with $A\subseteq B$).
-  Then $\sum_B f$ does not exist over the rationals. But $\sum_A f$ exists.
-  \end{itemize}
-  
+    Then $\sum_B f$ does not exist over the rationals. But $\sum_A f$ exists.
+
   The lemma also requires uniform continuity of the addition. And example of a topological group with continuous 
   but not uniformly continuous addition would be the positive reals with the usual multiplication as the addition.
   We do not know whether the lemma would also hold for such topological groups.
