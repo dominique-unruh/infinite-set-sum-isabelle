@@ -1,7 +1,7 @@
 chapter AFP
 
-session "Infinite_Sum" (AFP) = "HOL-Analysis" +
-  options [document=pdf, document_variants="infinite-sum=-proof,/ML:infinite-sum-proofs"]
+session "Infinite_Sums" (AFP) = "HOL-Analysis" +
+  options [document=pdf, document_variants="infinite-sums=-proof,/ML:infinite-sums-proofs"]
   sessions
     Jordan_Normal_Form
   theories

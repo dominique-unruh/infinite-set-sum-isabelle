@@ -1,4 +1,4 @@
-section \<open>Infinite sums as defined by Isabelle\<close>
+section \<open>Infinite sums as defined by Isabelle/HOL\<close>
 \<^latex>\<open>\label{section:Infsetsum}\<close>
 
 text \<open>This theory proves various facts about \<open>infsetsum\<close>, the existing definition of 
