@@ -1,2 +1,4 @@
-# infinite-set-sum-isabelle
-Theory about infinite sums in Isabelle/HOL
+Formalization of infinite sums in Isabelle/HOL
+
+Author: Dominique Unruh
+Licence: BSD 3-clause
