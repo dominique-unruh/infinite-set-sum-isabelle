@@ -166,7 +166,7 @@ text \<open>The following should be the definition of \<^const>\<open>uniformity
   instantiation \<open>prod :: (metric_space, metric_space) uniformity_dist\<close> in \<^theory>\<open>HOL-Analysis.Product_Vector\<close>.
   Ideally, the latter instantiation would be replaced by \<open>prod :: (uniformity,uniformity) uniformity\<close>
   with the definition below.
-  The existing definition (@{thm uniformity_prod_def} could then be derived as a corollary.
+  The existing definition (@{thm [source] uniformity_prod_def} could then be derived as a corollary.
   (See \<open>uniformity_prod_compatible\<close> below.)
   Then the definition of \<open>uniformly_continuous2\<close> below would be unnecessary because it would be
   equivalent to \<open>uniformly_continuous_on UNIV\<close>.\<close>

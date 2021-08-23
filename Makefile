@@ -11,4 +11,4 @@ build document/infinite-sum.pdf document/infinite-sum-full.pdf : \
 	"$(ISABELLE)" build -b -D . -o "document_output=document"
 
 show : document/infinite-sum.pdf
-	evince $^
+	evince $^ &

@@ -19,7 +19,7 @@ proof
     using that by (auto simp flip: infsum_finite simp: n_def[abs_def] intro!: infsum_mono_neutral)
     
   then show \<open>f abs_summable_on A\<close>
-    by (auto intro!: abs_summable_finiteI simp: n_def)
+    by (auto intro!: abs_summable_finite_sumsI simp: n_def)
 next
   define n where \<open>n x = norm (f x)\<close> for x
   assume \<open>f abs_summable_on A\<close>
@@ -39,7 +39,7 @@ lemma abs_summable_infsum_exists:
   apply (rule infsum_exists_norm_infsum_exists)
   by (simp add: assms norm_infsum_exists_iff_abs_summable_on)
 
-text \<open>The converse of @{thm abs_summable_infsum_exists} does not hold:
+text \<open>The converse of @{thm [source] abs_summable_infsum_exists} does not hold:
   Consider a separable infinite-dimensional Hilbert space of square-summable sequences.
   Let \<^term>\<open>e\<^sub>i\<close> denote the sequence with 1 in the \<^term>\<open>i\<close>th position, 0 elsewhere.
   Let \<^term>\<open>f (i::nat) = 1/i * e\<^sub>i\<close>. We have \<^term>\<open>\<not> f abs_summable_on UNIV\<close> because \<open>norm (f i) = 1/i\<close>
@@ -47,8 +47,7 @@ text \<open>The converse of @{thm abs_summable_infsum_exists} does not hold:
   the limit is the sequence with \<^term>\<open>1/i\<close> in the \<^term>\<open>i\<close>th position.
 
   (We have not formalized this separating example here because to the best of our knowledge,
-  this Hilbert space has not been formalized in Isabelle/HOL yet.)
-\<close>
+  this Hilbert space has not been formalized in Isabelle/HOL yet.)\<close>
 
 lemma infsetsum_infsum:
   assumes "f abs_summable_on A"

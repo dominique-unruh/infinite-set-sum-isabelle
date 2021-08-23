@@ -4,8 +4,6 @@ section \<open>Infinite sums\<close>
 
 (* TODO: also overall intro and abstract *)
 
-(* TODO: @{thm ...} is not the right thing for fact references *)
-
 theory Infinite_Sum
   imports
     Infinite_Sum_Misc
@@ -61,15 +59,15 @@ let
 in [(\<^const_syntax>\<open>infsum\<close>, K sum_tr')] end
 \<close>
 
-subsection \<open>Properties\<close>
+subsection \<open>General properties\<close>
 
 
 lemma 
   assumes \<open>\<And>x. x\<in>T-S \<Longrightarrow> g x = 0\<close>
   assumes \<open>\<And>x. x\<in>S-T \<Longrightarrow> f x = 0\<close>
   assumes \<open>\<And>x. x\<in>S\<inter>T \<Longrightarrow> f x = g x\<close>
-  shows infsum_exists_neutral_cong: "infsum_exists f S \<longleftrightarrow> infsum_exists g T" (is ?thesis_ex)
-    and infsum_neutral_cong: \<open>infsum f S = infsum g T\<close> (is ?thesis_eq)
+  shows infsum_exists_cong_neutral: "infsum_exists f S \<longleftrightarrow> infsum_exists g T" (is ?thesis_ex)
+    and infsum_cong_neutral: \<open>infsum f S = infsum g T\<close> (is ?thesis_eq)
 proof -
   have \<open>eventually P (filtermap (sum f) (finite_subsets_at_top S))
       = eventually P (filtermap (sum g) (finite_subsets_at_top T))\<close> for P
@@ -128,12 +126,12 @@ qed
 lemma infsum_exists_cong: 
   assumes "\<And>x. x\<in>A \<Longrightarrow> f x = g x"
   shows "infsum_exists f A \<longleftrightarrow> infsum_exists g A"
-  by (metis (mono_tags, lifting) DiffE IntD1 infsum_exists_neutral_cong assms)
+  by (metis (mono_tags, lifting) DiffE IntD1 infsum_exists_cong_neutral assms)
 
 lemma infsum_cong:
   assumes "\<And>x. x\<in>A \<Longrightarrow> f x = g x"
   shows "infsum f A = infsum g A"
-  by (metis Diff_cancel assms empty_iff inf.idem infsum_neutral_cong)
+  by (metis Diff_cancel assms empty_iff inf.idem infsum_cong_neutral)
 
 lemma infsum_exists_cofin_subset:
   fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add,t2_space}"
@@ -242,18 +240,18 @@ lemma infsum_mono_neutral:
 proof -
   define f' g' where \<open>f' x = (if x \<in> A then f x else 0)\<close> and \<open>g' x = (if x \<in> B then g x else 0)\<close> for x
   have [simp]: \<open>infsum_exists f' (A\<union>B)\<close>
-    apply (rule infsum_exists_neutral_cong[where f=f and S=A, THEN iffD1])
+    apply (rule infsum_exists_cong_neutral[where f=f and S=A, THEN iffD1])
     by (auto simp: f'_def)
   moreover have f'f: \<open>infsum f' (A\<union>B) = infsum f A\<close>
-    apply (rule infsum_neutral_cong[where g=f and T=A])
+    apply (rule infsum_cong_neutral[where g=f and T=A])
     by (auto simp: f'_def)
   ultimately have f'_lim: \<open>(sum f' \<longlongrightarrow> infsum f A) (finite_subsets_at_top (A\<union>B))\<close>
     by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
   have [simp]: \<open>infsum_exists g' (A\<union>B)\<close>
-    apply (rule_tac infsum_exists_neutral_cong[where f=g and S=B, THEN iffD1])
+    apply (rule_tac infsum_exists_cong_neutral[where f=g and S=B, THEN iffD1])
     by (auto simp: g'_def)
   moreover have g'g: \<open>infsum g' (A\<union>B) = infsum g B\<close>
-    apply (rule infsum_neutral_cong[where g=g and T=B])
+    apply (rule infsum_cong_neutral[where g=g and T=B])
     by (auto simp: g'_def)
   ultimately have g'_lim: \<open>(sum g' \<longlongrightarrow> infsum g B) (finite_subsets_at_top (A\<union>B))\<close>
     by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
@@ -488,7 +486,7 @@ proof -
     by (auto simp add: tendsto_Lim)
 qed
 
-text \<open>A variant of @{thm infsum_0} suitable as a simp-rule\<close>
+text \<open>A variant of @{thm [source] infsum_0} suitable as a simp-rule\<close>
 lemma  
   shows infsum_0_simp[simp]: \<open>infsum (\<lambda>_. 0) M = 0\<close>
     and infsum_ex_0_simp[simp]: \<open>infsum_exists (\<lambda>_. 0) M\<close>
@@ -527,10 +525,10 @@ proof -
   define fA fB where \<open>fA x = (if x \<in> A then f x else 0)\<close>
     and \<open>fB x = (if x \<notin> A then f x else 0)\<close> for x
   have conv_fA: \<open>infsum_exists fA (A \<union> B)\<close>
-    apply (subst infsum_exists_neutral_cong[where T=A and g=f])
+    apply (subst infsum_exists_cong_neutral[where T=A and g=f])
     using \<open>infsum_exists f A\<close> by (auto simp: fA_def)
   have conv_fB: \<open>infsum_exists fB (A \<union> B)\<close>
-    apply (subst infsum_exists_neutral_cong[where T=B and g=f])
+    apply (subst infsum_exists_cong_neutral[where T=B and g=f])
     using \<open>infsum_exists f B\<close> disj by (auto simp: fB_def)
   have fAB: \<open>f x = fA x + fB x\<close> for x
     unfolding fA_def fB_def by simp
@@ -539,7 +537,7 @@ proof -
     using conv_fA conv_fB by (rule infsum_add)
   also have \<open>\<dots> = infsum fA A + infsum fB B\<close>
     unfolding fA_def fB_def
-    by (subst infsum_neutral_cong[where S=\<open>A\<union>B\<close>], auto)+
+    by (subst infsum_cong_neutral[where S=\<open>A\<union>B\<close>], auto)+
   also have \<open>\<dots> = infsum f A + infsum f B\<close>
     apply (subst infsum_cong[where f=fA and g=f], simp add: fA_def)
     apply (subst infsum_cong[where f=fB and g=f], simp add: fB_def)
@@ -647,7 +645,7 @@ proof -
     by (auto simp: infsum_exists_def)
 qed
 
-text \<open>A special case of @{thm infsum_exists_subset} for Banach spaces with less premises.\<close>
+text \<open>A special case of @{thm [source] infsum_exists_subset} for Banach spaces with less premises.\<close>
 
 lemma infsum_exists_subset_banach:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::banach\<close>
@@ -730,8 +728,6 @@ lemma
    apply (rule infsum_exists_comm_additive_general; auto simp: assms additive.sum)
   by (rule infsum_comm_additive_general; auto simp: assms additive.sum)
 
-
-(* TODO rename *)
 lemma
   fixes f :: \<open>'a \<Rightarrow> 'b :: {conditionally_complete_linorder, ordered_comm_monoid_add, linorder_topology}\<close>
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0\<close>
@@ -774,7 +770,7 @@ lemma
   using assms by (rule pos_infsum; simp)
 
 
-lemma infsetsum_geq0:
+lemma infsum_nonneg:
   fixes f :: "'a \<Rightarrow> 'b::{ordered_comm_monoid_add,linorder_topology}"
   assumes "infsum_exists f M"
     and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
@@ -806,8 +802,8 @@ lemma
   assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
   assumes summableAB: "infsum_exists f (Sigma A B)"
   assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
-  shows infsetsum_Sigma: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
-    and infsetsum_exists_Sigma: \<open>infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A\<close>
+  shows infsum_Sigma: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
+    and infsum_exists_Sigma: \<open>infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A\<close>
 proof -
   define S SB SAB where \<open>S = infsum f (Sigma A B)\<close> and \<open>SB x = infsum (\<lambda>y. f (x, y)) (B x)\<close> 
     and \<open>SAB = infsum SB A\<close> for x
@@ -913,13 +909,13 @@ proof -
     using FA_def \<open>(sum SB \<longlongrightarrow> S) FA\<close> infsum_exists_def by blast
 qed
 
-text \<open>A special case of @{thm infsetsum_Sigma} for Banach spaces. It has less premises.\<close>
+text \<open>A special case of @{thm [source] infsum_Sigma} for Banach spaces. It has less premises.\<close>
 lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::banach\<close>
   assumes [simp]: "infsum_exists f (Sigma A B)"
-  shows infsetsum_Sigma_banach: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A" (is ?thesis1)
-    and infsetsum_exists_Sigma_banach: "infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A" (is ?thesis2)
+  shows infsum_Sigma_banach: "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A" (is ?thesis1)
+    and infsum_exists_Sigma_banach: "infsum_exists (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A" (is ?thesis2)
 proof -
   have [simp]: \<open>infsum_exists (\<lambda>y. f (x, y)) (B x)\<close> if \<open>x \<in> A\<close> for x
   proof -
@@ -933,10 +929,10 @@ proof -
       by (auto simp: o_def)
   qed
   show ?thesis1
-    apply (rule infsetsum_Sigma)
+    apply (rule infsum_Sigma)
     by auto
   show ?thesis2
-    apply (rule infsetsum_exists_Sigma)
+    apply (rule infsum_exists_Sigma)
     by auto
 qed
 
@@ -946,19 +942,19 @@ lemma
   assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
   assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
-  shows infsetsum_Sigma': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
-    and infsetsum_exists_Sigma': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
-   subgoal apply (subst infsetsum_Sigma) using assms by auto
-   apply (rule infsetsum_exists_Sigma[where f=\<open>\<lambda>(x,y). f x y\<close>, simplified]) using assms by auto
+  shows infsum_Sigma': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
+    and infsum_exists_Sigma': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
+   subgoal apply (subst infsum_Sigma) using assms by auto
+   apply (rule infsum_exists_Sigma[where f=\<open>\<lambda>(x,y). f x y\<close>, simplified]) using assms by auto
 
 lemma
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::banach\<close>
   assumes "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
-  shows infsetsum_Sigma_banach': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
-    and infsetsum_Sigma_banach_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
-  subgoal apply (subst infsetsum_Sigma_banach) using assms by auto
-  apply (rule infsetsum_exists_Sigma_banach[where f=\<open>\<lambda>(x,y). f x y\<close>, simplified]) using assms by auto
+  shows infsum_Sigma_banach': "infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)"
+    and infsum_Sigma_banach_exists': \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
+  subgoal apply (subst infsum_Sigma_banach) using assms by auto
+  apply (rule infsum_exists_Sigma_banach[where f=\<open>\<lambda>(x,y). f x y\<close>, simplified]) using assms by auto
 
 lemma infsum_swap:
   fixes A :: "'a set" and B :: "'b set"
@@ -974,14 +970,14 @@ proof -
     apply (subst infsum_exists_reindex)
     using assms by (auto simp: o_def)
   have \<open>infsum (\<lambda>x. infsum (\<lambda>y. f x y) B) A = infsum (\<lambda>(x,y). f x y) (A \<times> B)\<close>
-    apply (subst infsetsum_Sigma)
+    apply (subst infsum_Sigma)
     using assms by auto
   also have \<open>\<dots> = infsum (\<lambda>(x,y). f y x) (B \<times> A)\<close>
     apply (subst product_swap[symmetric])
     apply (subst infsum_reindex)
     using assms by (auto simp: o_def)
   also have \<open>\<dots> = infsum (\<lambda>y. infsum (\<lambda>x. f x y) A) B\<close>
-    apply (subst infsetsum_Sigma)
+    apply (subst infsum_Sigma)
     using assms by auto
   finally show ?thesis
     by -
@@ -998,20 +994,20 @@ proof -
     apply (subst infsum_exists_reindex)
     using assms by (auto simp: o_def)
   have \<open>infsum (\<lambda>x. infsum (\<lambda>y. f x y) B) A = infsum (\<lambda>(x,y). f x y) (A \<times> B)\<close>
-    apply (subst infsetsum_Sigma_banach)
+    apply (subst infsum_Sigma_banach)
     using assms by auto
   also have \<open>\<dots> = infsum (\<lambda>(x,y). f y x) (B \<times> A)\<close>
     apply (subst product_swap[symmetric])
     apply (subst infsum_reindex)
     using assms by (auto simp: o_def)
   also have \<open>\<dots> = infsum (\<lambda>y. infsum (\<lambda>x. f x y) A) B\<close>
-    apply (subst infsetsum_Sigma_banach)
+    apply (subst infsum_Sigma_banach)
     using assms by auto
   finally show ?thesis
     by -
 qed
 
-lemma infsetsum_0D:
+lemma infsum_0D:
   fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add,ordered_ab_group_add,linorder_topology}"
   assumes "infsum f A = 0"
     and abs_sum: "infsum_exists f A"
@@ -1024,7 +1020,7 @@ proof (rule ccontr)
     apply (rule infsum_exists_cofin_subset)
     using assms by auto
   then have pos: \<open>infsum f (A - {x}) \<ge> 0\<close>
-    apply (rule infsetsum_geq0)
+    apply (rule infsum_nonneg)
     using nneg by auto
 
   have [trans]: \<open>x \<ge> y \<Longrightarrow> y > z \<Longrightarrow> x > z\<close> for x y z :: 'b by auto
@@ -1042,7 +1038,7 @@ proof (rule ccontr)
     using assms by auto
 qed
 
-lemma infsetsum_cmult_left:
+lemma infsum_cmult_left:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
   assumes \<open>c \<noteq> 0 \<Longrightarrow> infsum_exists f A\<close>
   shows "infsum (\<lambda>x. f x * c) A = infsum f A * c"
@@ -1065,7 +1061,7 @@ next
     by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
 qed
 
-lemma infsetsum_cmult_right:
+lemma infsum_cmult_right:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
   assumes \<open>c \<noteq> 0 \<Longrightarrow> infsum_exists f A\<close>
   shows "infsum (\<lambda>x. c * f x) A = c * infsum f A"
@@ -1088,7 +1084,7 @@ next
     by (metis finite_subsets_at_top_neq_bot infsum_def infsum_exists_def tendsto_Lim)
 qed
 
-lemma infsetsum_exists_cmult_left:
+lemma infsum_exists_cmult_left:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
   assumes \<open>infsum_exists f A\<close>
   shows "infsum_exists (\<lambda>x. f x * c) A"
@@ -1105,7 +1101,7 @@ proof -
     by (metis infsum_exists_def)
 qed
 
-lemma infsetsum_exists_cmult_right:
+lemma infsum_exists_cmult_right:
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,semiring_0}"
   assumes \<open>infsum_exists f A\<close>
   shows "infsum_exists (\<lambda>x. c * f x) A"
@@ -1122,45 +1118,45 @@ proof -
     by (metis infsum_exists_def)
 qed
 
-lemma infsetsum_exists_cmult_left':
+lemma infsum_exists_cmult_left':
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
   assumes \<open>c \<noteq> 0\<close>
   shows "infsum_exists (\<lambda>x. f x * c) A \<longleftrightarrow> infsum_exists f A"
 proof
   assume \<open>infsum_exists f A\<close>
   then show \<open>infsum_exists (\<lambda>x. f x * c) A\<close>
-    by (rule infsetsum_exists_cmult_left)
+    by (rule infsum_exists_cmult_left)
 next
   assume \<open>infsum_exists (\<lambda>x. f x * c) A\<close>
   then have \<open>infsum_exists (\<lambda>x. f x * c * inverse c) A\<close>
-    by (rule infsetsum_exists_cmult_left)
+    by (rule infsum_exists_cmult_left)
   then show \<open>infsum_exists f A\<close>
     by (metis (no_types, lifting) assms infsum_exists_cong mult.assoc mult.right_neutral right_inverse)
 qed
 
-lemma infsetsum_exists_cmult_right':
+lemma infsum_exists_cmult_right':
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
   assumes \<open>c \<noteq> 0\<close>
   shows "infsum_exists (\<lambda>x. c * f x) A \<longleftrightarrow> infsum_exists f A"
 proof
   assume \<open>infsum_exists f A\<close>
   then show \<open>infsum_exists (\<lambda>x. c * f x) A\<close>
-    by (rule infsetsum_exists_cmult_right)
+    by (rule infsum_exists_cmult_right)
 next
   assume \<open>infsum_exists (\<lambda>x. c * f x) A\<close>
   then have \<open>infsum_exists (\<lambda>x. inverse c * (c * f x)) A\<close>
-    by (rule infsetsum_exists_cmult_right)
+    by (rule infsum_exists_cmult_right)
   then show \<open>infsum_exists f A\<close>
     by (metis (no_types, lifting) assms infsum_exists_cong left_inverse mult.assoc mult.left_neutral)
 qed
 
-lemma infsetsum_cmult_left':
+lemma infsum_cmult_left':
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
   shows "infsum (\<lambda>x. f x * c) A = infsum f A * c"
 proof (cases \<open>c \<noteq> 0 \<longrightarrow> infsum_exists f A\<close>)
   case True
   then show ?thesis
-    apply (rule_tac infsetsum_cmult_left) by auto
+    apply (rule_tac infsum_cmult_left) by auto
 next
   case False
   note asm = False
@@ -1173,19 +1169,19 @@ next
     with asm have nex: \<open>\<not> infsum_exists f A\<close>
       by simp
     moreover have nex': \<open>\<not> infsum_exists (\<lambda>x. f x * c) A\<close>
-      using asm False apply (subst infsetsum_exists_cmult_left') by auto
+      using asm False apply (subst infsum_exists_cmult_left') by auto
     ultimately show ?thesis
       unfolding infsum_def by simp
   qed
 qed
 
-lemma infsetsum_cmult_right':
+lemma infsum_cmult_right':
   fixes f :: "'a \<Rightarrow> 'b :: {t2_space,topological_semigroup_mult,division_ring}"
   shows "infsum (\<lambda>x. c * f x) A = c * infsum f A"
 proof (cases \<open>c \<noteq> 0 \<longrightarrow> infsum_exists f A\<close>)
   case True
   then show ?thesis
-    apply (rule_tac infsetsum_cmult_right) by auto
+    apply (rule_tac infsum_cmult_right) by auto
 next
   case False
   note asm = False
@@ -1198,7 +1194,7 @@ next
     with asm have nex: \<open>\<not> infsum_exists f A\<close>
       by simp
     moreover have nex': \<open>\<not> infsum_exists (\<lambda>x. c * f x) A\<close>
-      using asm False apply (subst infsetsum_exists_cmult_right') by auto
+      using asm False apply (subst infsum_exists_cmult_right') by auto
     ultimately show ?thesis
       unfolding infsum_def by simp
   qed
@@ -1306,7 +1302,7 @@ proof -
     by (rule ennreal_of_enat_inj[THEN iffD1])
 qed
 
-text \<open>This lemma helps to related a real-valued infsum to a supremum over extended reals.\<close>
+text \<open>This lemma helps to related a real-valued infsum to a supremum over extended nonnegative reals.\<close>
 
 lemma infsum_nonneg_is_SUPREMUM_ennreal:
   fixes f :: "'a \<Rightarrow> real"
@@ -1351,7 +1347,7 @@ subsection \<open>Real numbers\<close>
 text \<open>Most lemmas in the general property section apply to real numbers.\<close>
 
 
-lemma infsetsum_nonneg_is_SUPREMUM_real:
+lemma infsum_nonneg_is_SUPREMUM_real:
   fixes f :: "'a \<Rightarrow> real"
   assumes summable: "infsum_exists f A"
     and fnn: "\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0"
@@ -1413,7 +1409,7 @@ next
     by (auto intro!: additive.intro)
 qed
 
-lemma infsetsum_cnj[simp]: \<open>infsum (\<lambda>x. cnj (f x)) M = cnj (infsum f M)\<close>
+lemma infsum_cnj[simp]: \<open>infsum (\<lambda>x. cnj (f x)) M = cnj (infsum f M)\<close>
 proof (cases \<open>infsum_exists f M\<close>)
   case True
   then show ?thesis
@@ -1456,7 +1452,7 @@ lemma infsum_exists_Im:
   using assms by (auto intro!: additive.intro)
 
 
-lemma infsetsum_0D_complex:
+lemma infsum_0D_complex:
   fixes f :: "'a \<Rightarrow> complex"
   assumes "infsum f A = 0"
     and abs_sum: "infsum_exists f A"
@@ -1465,17 +1461,17 @@ lemma infsetsum_0D_complex:
   shows "f x = 0"
 proof -
   have \<open>Im (f x) = 0\<close>
-    apply (rule infsetsum_0D[where A=A])
+    apply (rule infsum_0D[where A=A])
     using assms by (auto simp add: abs_sum infsum_exists_Im infsum_Im)
   moreover have \<open>Re (f x) = 0\<close>
-    apply (rule infsetsum_0D[where A=A])
+    apply (rule infsum_0D[where A=A])
     using assms by (auto simp add: abs_sum infsum_exists_Re infsum_Re)
   ultimately show ?thesis
     by (simp add: complex_eqI)
 qed
 
 
-text \<open>@{thm infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
+text \<open>@{thm [source] infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
 Thus we have a separate corollary for those:\<close>
 
 lemma infsum_mono_neutral_complex:
@@ -1493,7 +1489,7 @@ proof -
   then have Re: \<open>Re (infsum f A) \<le> Re (infsum g B)\<close>
     by (metis assms(1-2) infsum_Re)
   have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (g x)) B\<close>
-    apply (rule infsum_neutral_cong)
+    apply (rule infsum_cong_neutral)
     using assms(3-5) by (auto simp add: infsum_exists_Re)
   then have Im: \<open>Im (infsum f A) = Im (infsum g B)\<close>
     by (metis assms(1-2) infsum_Im)
@@ -1503,7 +1499,8 @@ qed
 
 
 lemma infsum_mono_complex:
-  \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm infsum_mono} can be used. But \<^typ>\<open>complex\<close> does not have the right typeclass.\<close>
+  \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm [source] infsum_mono} can be used. 
+      But \<^typ>\<open>complex\<close> does not have the right typeclass.\<close>
   fixes f g :: "'a \<Rightarrow> complex"
   assumes f_sum: "infsum_exists f A" and g_sum: "infsum_exists g A"
   assumes leq: "\<And>x. x \<in> A \<Longrightarrow> f x \<le> g x"
@@ -1511,14 +1508,14 @@ lemma infsum_mono_complex:
   by (metis DiffE IntD1 f_sum g_sum infsum_mono_neutral_complex leq)
 
 
-lemma infsetsum_geq0_complex:
+lemma infsum_nonneg_complex:
   fixes f :: "'a \<Rightarrow> complex"
   assumes "infsum_exists f M"
     and "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
   shows "infsum f M \<ge> 0" (is "?lhs \<ge> _")
   by (metis assms(1) assms(2) infsum_0_simp infsum_ex_0_simp infsum_mono_complex)
 
-lemma infsetsum_cmod:
+lemma infsum_cmod:
   assumes "infsum_exists f M"
     and fnn: "\<And>x. x \<in> M \<Longrightarrow> 0 \<le> f x"
   shows "infsum (\<lambda>x. cmod (f x)) M = cmod (infsum f M)"
