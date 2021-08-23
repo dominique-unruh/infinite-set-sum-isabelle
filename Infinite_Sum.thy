@@ -6,8 +6,8 @@ infinite, potentially uncountable index set with no particular ordering.
 (This is different from series. Those are sums indexed by natural numbers,
 and the order of the index set matters.)
 
-Our definition is quite standard: $s:=\sum_{x\in A} f(x)$ is limit of the finite sums $s_F:=\sum_{x\in F} f(x)$.
-That is, $s$ is the limits of the net $s_F$ where $F$ are finite subsets of $A$ ordered by inclusion.
+Our definition is quite standard: $s:=\sum_{x\in A} f(x)$ is the limit of finite sums $s_F:=\sum_{x\in F} f(x)$ for increasing $F$.
+That is, $s$ is the limit of the net $s_F$ where $F$ are finite subsets of $A$ ordered by inclusion.
 We believe that this is the standard definition for such sums.
 See, e.g., Definition 4.11 in \cite{conway2013course}.
 This definition is quite general: it is well-defined whenever $f$ takes values in some
@@ -18,16 +18,20 @@ This definition is different from the definition of infinite sums provided in th
 standard library (theory \<open>Infinite_Set_Sum\<close>). That definition defines $\sum_{x\in A} f(x)$ in terms
 of integrals $\int f(x)d\mu(x)$ where $\mu$ is the counting measure on $A$. 
 A consequence of this definition is that $\sum_{x\in A}f(x)$ is only defined if $f$ takes values in
-a second countable Banach space. Furthermore, that sum is only defined when it converges absolutely.
+a second-countable Banach space. Furthermore, that sum is only defined when it converges absolutely.
 (I.e., $\sum_{x\in A}\lVert f(x)\rVert$ converges.)
-Even for second countable Banach spaces, this is more restrictive than the our definition;
-see the discussion after lemma \<open>abs_summable_infsum_exists\<close> in theory \<open>Infsetsum_Infsum\<close> for an 
-example of a sum on a separable Hilbert space that converge according to our definition but
+(Natural examples of spaces in which this definition does not apply but ours does are a non-separable Hilbert space,
+the bounded operators over a non-separable Hilbert space,
+the bounded operators over a separable Hilbert space with respect to the weak/strong operator topology, etc.)
+
+Even for second-countable Banach spaces, this is more restrictive than the our definition;
+see the discussion after lemma \<^latex>\<open>\hyperref[lemma:abs_summable_infsum_exists]{\textit{abs-summable-infsum-exists}}\<close> in theory \<open>Infsetsum_Infsum\<close> for an 
+example of a sum on a separable Hilbert space that converges according to our definition but
 not according to the definition from the Isabelle/HOL standard library.
 
 In this theory, besides the definition, we present important properties of the infinite sum.
 The relationship to the infinite sum as defined in the standard library is elaborated in the
-theory \<open>Infsetsum_Infsum\<close>.\<close>
+theory \<open>Infsetsum_Infsum\<close> (\autoref{section:Infsetsum_Infsum}).\<close>
 
 theory Infinite_Sum
   imports
@@ -579,20 +583,20 @@ qed
 
 text \<open>The following lemma indeed needs a complete space (as formalized by the premise \<^term>\<open>complete UNIV\<close>).
   The following two counterexamples show this:
-
-  \<^item> Consider the real vector space $V$ of sequences with finite support, and with the $\ell_2$-norm (sum of squares).
-    Let $e_i$ denote the sequence with a $1$ at position $i$.
-    Let $f : \mathbb Z \to V$ be defined as $f(n) := e_{\lvert n\rvert} / n$ (with $f(0) := 0$).
-    We have that $\sum_{\mathbb Z} f = 0$ (it even converges absolutely). 
-    But $\sum_{\mathbb N} f$ does not exist (it would converge against a sequence with infinite support).
-
-  \<^item> Let f be a positive rational valued function such that $\sum_B f$ is $\sqrt 2$ and $\sum_A f$ is 1 (over the reals, with $A\subseteq B$).
-    Then $\sum_B f$ does not exist over the rationals. But $\sum_A f$ exists.
+  \begin{itemize}
+  \item Consider the real vector space $V$ of sequences with finite support, and with the $\ell_2$-norm (sum of squares).
+      Let $e_i$ denote the sequence with a $1$ at position $i$.
+      Let $f : \mathbb Z \to V$ be defined as $f(n) := e_{\lvert n\rvert} / n$ (with $f(0) := 0$).
+      We have that $\sum_{n\in\mathbb Z} f(n) = 0$ (it even converges absolutely). 
+      But $\sum_{n\in\mathbb N} f(n)$ does not exist (it would converge against a sequence with infinite support).
+  
+  \item Let $f$ be a positive rational valued function such that $\sum_{x\in B} f(x)$ is $\sqrt 2$ and $\sum_{x\in A} f(x)$ is 1 (over the reals, with $A\subseteq B$).
+      Then $\sum_{x\in B} f(x)$ does not exist over the rationals. But $\sum_{x\in A} f(x)$ exists.
+  \end{itemize}
 
   The lemma also requires uniform continuity of the addition. And example of a topological group with continuous 
   but not uniformly continuous addition would be the positive reals with the usual multiplication as the addition.
-  We do not know whether the lemma would also hold for such topological groups.
-\<close>
+  We do not know whether the lemma would also hold for such topological groups.\<close>
 
 lemma infsum_exists_subset:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::{ab_group_add,t2_space,uniform_space}\<close>
@@ -717,11 +721,11 @@ next
 qed
 
 
-text \<open>\<open>infsum_additive_general\<close> and \<open>infsum_additive\<close> state that the infinite sum commutes with
-  a continuous additive function. \<open>infsum_additive_general\<close> is stated more generally by avoiding
+text \<open>The lemmas \<open>infsum_comm_additive_general\<close> and \<open>infsum_comm_additive\<close> below both state that the infinite sum commutes with
+  a continuous additive function. \<open>infsum_comm_additive_general\<close> is stated more generally by avoiding
   the constant \<^const>\<open>additive\<close>. That constant introduces an additional sort constraint
   (group instead of monoid). For example, extended reals (\<^typ>\<open>ereal\<close>, \<^typ>\<open>ennreal\<close>) are not covered
-  by \<open>infsum_additive\<close>.\<close>
+  by \<open>infsum_comm_additive\<close>.\<close>
 
 lemma 
   assumes f_sum: \<open>\<And>F. finite F \<Longrightarrow> F \<subseteq> S \<Longrightarrow> sum (f o g) F = f (sum g F)\<close>
@@ -1495,7 +1499,7 @@ proof -
 qed
 
 
-text \<open>@{thm [source] infsum_mono_neutral} applies to various linear ordered monoids such as the reals but not to the complex numbers.
+text \<open>The lemma @{thm [source] infsum_mono_neutral} above applies to various linear ordered monoids such as the reals but not to the complex numbers.
 Thus we have a separate corollary for those:\<close>
 
 lemma infsum_mono_neutral_complex:

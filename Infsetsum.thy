@@ -754,7 +754,7 @@ qed
 
 
 text \<open>The following lemma contrasts with @{thm [source] abs_summable_times}
-  where \<^term>\<open>f\<close>,\<^term>\<open>g\<close> have the same argument.\<close>
+  where \<^term>\<open>f\<close>, \<^term>\<open>g\<close> have the same argument.\<close>
 
 lemma
   fixes f :: "'a \<Rightarrow> 'c :: {banach, real_normed_field, second_countable_topology}"
@@ -773,7 +773,7 @@ qed
 
 subsection \<open>Extended reals\<close>
 
-text \<open>This lemma helps to related a real-valued infsum to a supremum over extended nonnegative reals.\<close>
+text \<open>This lemma helps to relate a real-valued infsetsum to a supremum over extended nonnegative reals.\<close>
 
 
 lemma infsetsum_nonneg_is_SUPREMUM_ennreal:
@@ -924,7 +924,7 @@ proof -
   from leq geq show ?thesis by simp
 qed
 
-text \<open>This lemma helps to related a real-valued infsum to a supremum over extended reals.\<close>
+text \<open>This lemma helps to relate a real-valued infsetsum to a supremum over extended reals.\<close>
 
 
 lemma infsetsum_nonneg_is_SUPREMUM_ereal:

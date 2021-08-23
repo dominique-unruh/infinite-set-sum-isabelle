@@ -11,8 +11,8 @@ theory Infsetsum_Infsum
 begin
 
 text \<open>The following theorem relates \<^const>\<open>abs_summable_on\<close> with \<^const>\<open>infsum_exists\<close>.
-  Note that while this theorem expresses an equivalence, thesection notion on the lhs is more general
-  nonetheless because it applies to a wider range of types. (The rhs requires second countable
+  Note that while this theorem expresses an equivalence, the notion on the lhs is more general
+  nonetheless because it applies to a wider range of types. (The rhs requires second-countable
   Banach spaces while the lhs is well-defined on arbitrary real vector spaces.)\<close>
 
 lemma norm_infsum_exists_iff_abs_summable_on: \<open>infsum_exists (\<lambda>x. norm (f x)) A \<longleftrightarrow> f abs_summable_on A\<close>
@@ -36,7 +36,7 @@ next
     by (auto simp add: n_def bdd_above_def)
 qed
 
-lemma abs_summable_infsum_exists:
+lemma abs_summable_infsum_exists: \<^latex>\<open>\label{lemma:abs_summable_infsum_exists}\<close>
   fixes f :: "'a\<Rightarrow>'b::{second_countable_topology,banach}" and A :: "'a set"
   assumes "f abs_summable_on A"
   shows "infsum_exists f A"
@@ -44,11 +44,11 @@ lemma abs_summable_infsum_exists:
   by (simp add: assms norm_infsum_exists_iff_abs_summable_on)
 
 text \<open>The converse of @{thm [source] abs_summable_infsum_exists} does not hold:
-  Consider a separable infinite-dimensional Hilbert space of square-summable sequences.
-  Let \<^term>\<open>e\<^sub>i\<close> denote the sequence with 1 in the \<^term>\<open>i\<close>th position, 0 elsewhere.
-  Let \<^term>\<open>f (i::nat) = 1/i * e\<^sub>i\<close>. We have \<^term>\<open>\<not> f abs_summable_on UNIV\<close> because \<open>norm (f i) = 1/i\<close>
-  and thus the sum over \<open>norm (f i)\<close> diverges. On the other hand, we have \<^term>\<open>infsum_exists f UNIV\<close>;
-  the limit is the sequence with \<^term>\<open>1/i\<close> in the \<^term>\<open>i\<close>th position.
+  Consider the Hilbert space of square-summable sequences.
+  Let $e_i$ denote the sequence with 1 in the $i$th position and 0 elsewhere.
+  Let $f(i) := e_i/i$ for $i\geq1$. We have \<^term>\<open>\<not> f abs_summable_on UNIV\<close> because $\lVert f(i)\rVert=1/i$
+  and thus the sum over $\lVert f(i)\rVert$ diverges. On the other hand, we have \<^term>\<open>infsum_exists f UNIV\<close>;
+  the limit is the sequence with $1/i$ in the $i$th position.
 
   (We have not formalized this separating example here because to the best of our knowledge,
   this Hilbert space has not been formalized in Isabelle/HOL yet.)\<close>

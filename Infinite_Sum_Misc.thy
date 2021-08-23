@@ -166,14 +166,14 @@ text \<open>The following should be the definition of \<^const>\<open>uniformity
   However, we cannot define this instantiation because it would conflict with the existing 
   instantiation \<open>prod :: (metric_space, metric_space) uniformity_dist\<close> in \<^theory>\<open>HOL-Analysis.Product_Vector\<close>.
   Ideally, the latter instantiation would be replaced by \<open>prod :: (uniformity,uniformity) uniformity\<close>
-  with the definition below.
-  The existing definition (@{thm [source] uniformity_prod_def} could then be derived as a corollary.
+  with the definition of \<^term>\<open>uniformity_prod\<close> below.
+  The existing definition (@{thm [source] uniformity_prod_def}) could then be derived as a corollary.
   (See \<open>uniformity_prod_compatible\<close> below.)
   Then the definition of \<open>uniformly_continuous2\<close> below would be unnecessary because it would be
   equivalent to \<open>uniformly_continuous_on UNIV\<close>.\<close>
 definition \<open>uniformity_prod = (filtermap (\<lambda>((x1,x2),(y1,y2)). ((x1,y1),(x2,y2))) (uniformity \<times>\<^sub>F uniformity))\<close>
 
-definition uniformly_continuous2 :: "(('a::uniform_space*'a2::uniform_space) \<Rightarrow> 'b::uniform_space) \<Rightarrow> bool"
+definition uniformly_continuous2 :: "(('a::uniform_space \<times> 'a2::uniform_space) \<Rightarrow> 'b::uniform_space) \<Rightarrow> bool"
   where "uniformly_continuous2 f \<longleftrightarrow> (LIM (x, y) uniformity_prod. (f x, f y) :> uniformity)"
 
 lemma uniformity_prod_metric: \<open>uniformity_prod = (INF e\<in>{0 <..}. principal {(x, y). dist x y < e})\<close>
