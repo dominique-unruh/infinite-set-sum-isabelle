@@ -1,7 +1,8 @@
 section \<open>Miscellanea\<close>
+\<^latex>\<open>\label{section:Infinite_Sum_Misc}\<close>
 
 text \<open>This theory proves various (topology-related) facts that are not specific to infinite sums
-  and that are not found in the Isabelle standard library.\<close>
+  and that are not found in the Isabelle/HOL standard library.\<close>
 
 theory Infinite_Sum_Misc
   imports 

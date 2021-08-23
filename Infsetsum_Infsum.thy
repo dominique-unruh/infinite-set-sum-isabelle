@@ -1,4 +1,5 @@
 section \<open>Comparing the definitions\<close>
+\<^latex>\<open>\label{section:Infsetsum_Infsum}\<close>
 
 text \<open>This theory establishes the relationship between \<open>infsetsum\<close>
   (from the Isabelle/HOL standard library) and \<open>infsum\<close> (from the present development).
@@ -80,7 +81,7 @@ proof -
       qed
 
       have "(SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>F. norm (f x))) - ereal \<delta>
-    < (SUP i\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>i. norm (f x)))"
+            < (SUP i\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>i. norm (f x)))"
         using \<open>\<delta>>0\<close>
         by (metis diff_strict_left_mono diff_zero ereal_less_eq(3) ereal_minus(1) not_le sum_SUP)
       then obtain F where "F\<in>{F. finite F \<and> F \<subseteq> A}" and "ereal (sum (\<lambda>x. norm (f x)) F) > ?SUP - ereal (\<delta>)"

@@ -1,40 +1,33 @@
 \documentclass[11pt,a4paper]{article}
+\usepackage{geometry}
 \usepackage{isabelle,isabellesym}
-
-% further packages required for unusual symbols (see also
-% isabellesym.sty), use only when needed
-
 \usepackage{amsmath, amssymb}
-
-%\usepackage{eurosym}
-  %for \<euro>
-
-%\usepackage[only,bigsqcap]{stmaryrd}
-  %for \<Sqinter>
-
-%\usepackage{eufrak}
-  %for \<AA> ... \<ZZ>, \<aa> ... \<zz> (also included in amssymb)
-
-%\usepackage{textcomp}
-  %for \<onequarter>, \<onehalf>, \<threequarters>, \<degree>, \<cent>,
-  %\<currency>
-
-% this should be the last package used
 \usepackage{pdfsetup}
 
 % urls in roman style, theory text in math-similar italics
 \urlstyle{rm}
 \isabellestyle{it}
 
-% for uniform font size
-%\renewcommand{\isastyle}{\isastyleminor}
-
+\renewcommand\sectionautorefname{Section}
 
 \begin{document}
 
 \title{Infinite Sum -- Isabelle theories}
 \author{Dominique Unruh}
 \maketitle
+
+\begin{abstract}
+  We formalize a new definition of infinite sums (sums with an infinite and not necessarily countable index set).
+  The new definition is more general than the definition of sums in the Isabelle/HOL standard library (theory \textit{Infinite\_Set\_Sum});
+  it is well-defined for all commutative monoids with Hausdorff topology
+  (the Isabelle/HOL standard library supports only second countable Banach spaces).
+
+  We give the definition, important properties, and relate it to the definition from the standard library.
+  (In addition, we also provide a few missing and strengthened lemmas for the definition from the standard library.)
+
+  See the text at the beginning of \autoref{section:Infinite_Sum} for more information about the new definition.
+\end{abstract}
+
 
 \tableofcontents
 
@@ -44,9 +37,8 @@
 % generated text of all theories
 \input{session}
 
-% optional bibliography
-%\bibliographystyle{abbrv}
-%\bibliography{root}
+\bibliographystyle{abbrv}
+\bibliography{root}
 
 \end{document}
 

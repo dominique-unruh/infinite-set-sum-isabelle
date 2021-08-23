@@ -1,7 +1,8 @@
 section \<open>Infinite sums as defined by Isabelle\<close>
+\<^latex>\<open>\label{section:Infsetsum}\<close>
 
 text \<open>This theory proves various facts about \<open>infsetsum\<close>, the existing definition of 
-  infinite sums in the Isabelle standard library. Those facts are not related to our new definition.\<close>
+  infinite sums in the Isabelle/HOL standard library. Those facts are not related to our new definition.\<close>
 
 theory Infsetsum
   imports "HOL-Analysis.Infinite_Set_Sum"

@@ -1,8 +1,33 @@
 section \<open>Infinite sums\<close>
+\<^latex>\<open>\label{section:Infinite_Sum}\<close>
 
-(* TODO: intro text *)
+text \<open>In this theory, we introduce the definition of infinite sums, i.e., sums ranging over an
+infinite, potentially uncountable index set with no particular ordering.
+(This is different from series. Those are sums indexed by natural numbers,
+and the order of the index set matters.)
 
-(* TODO: also overall intro and abstract *)
+Our definition is quite standard: $s:=\sum_{x\in A} f(x)$ is limit of the finite sums $s_F:=\sum_{x\in F} f(x)$.
+That is, $s$ is the limits of the net $s_F$ where $F$ are finite subsets of $A$ ordered by inclusion.
+We believe that this is the standard definition for such sums.
+See, e.g., Definition 4.11 in \cite{conway2013course}.
+This definition is quite general: it is well-defined whenever $f$ takes values in some
+commutative monoid endowed with a Hausdorff topology.
+(Examples are reals, complex numbers, normed vector spaces, and more.)
+
+This definition is different from the definition of infinite sums provided in the Isabelle/HOL
+standard library (theory \<open>Infinite_Set_Sum\<close>). That definition defines $\sum_{x\in A} f(x)$ in terms
+of integrals $\int f(x)d\mu(x)$ where $\mu$ is the counting measure on $A$. 
+A consequence of this definition is that $\sum_{x\in A}f(x)$ is only defined if $f$ takes values in
+a second countable Banach space. Furthermore, that sum is only defined when it converges absolutely.
+(I.e., $\sum_{x\in A}\lVert f(x)\rVert$ converges.)
+Even for second countable Banach spaces, this is more restrictive than the our definition;
+see the discussion after lemma \<open>abs_summable_infsum_exists\<close> in theory \<open>Infsetsum_Infsum\<close> for an 
+example of a sum on a separable Hilbert space that converge according to our definition but
+not according to the definition from the Isabelle/HOL standard library.
+
+In this theory, besides the definition, we present important properties of the infinite sum.
+The relationship to the infinite sum as defined in the standard library is elaborated in the
+theory \<open>Infsetsum_Infsum\<close>.\<close>
 
 theory Infinite_Sum
   imports

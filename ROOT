@@ -5,6 +5,10 @@ session "Infinite_Sum" (AFP) = "HOL-Analysis" +
   sessions
     Jordan_Normal_Form
   theories
-    Infinite_Sum_Misc Infinite_Sum Infsetsum Infsetsum_Infsum
+    Infinite_Sum_Misc
+    Infinite_Sum
+    Infsetsum
+    Infsetsum_Infsum
   document_files
     "root.tex"
+    "root.bib"
