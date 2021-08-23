@@ -760,7 +760,6 @@ proof -
     by (simp add: infsum_def tendsto_Lim)
 qed
 
-(* TODO rename *)
 lemma
   fixes f :: \<open>'a \<Rightarrow> 'b :: {complete_linorder, ordered_comm_monoid_add, linorder_topology}\<close>
   assumes \<open>\<And>x. x\<in>A \<Longrightarrow> f x \<ge> 0\<close>

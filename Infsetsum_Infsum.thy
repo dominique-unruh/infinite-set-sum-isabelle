@@ -1,6 +1,9 @@
 section \<open>Comparing the definitions\<close>
 
-(* TODO intro text *)
+text \<open>This theory establishes the relationship between \<open>infsetsum\<close>
+  (from the Isabelle/HOL standard library) and \<open>infsum\<close> (from the present development).
+  In a nutshell: whenever \<open>infsetsum\<close> is defined, so is \<open>infsum\<close> and both have the same value.
+  (The converse does not hold, even on types where \<open>infsetsum\<close> can be applied.)\<close>
 
 theory Infsetsum_Infsum
   imports Infsetsum Infinite_Sum
