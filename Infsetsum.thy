@@ -5,16 +5,12 @@ text \<open>This theory proves various facts about \<open>infsetsum\<close>, the
   infinite sums in the Isabelle/HOL standard library. Those facts are not related to our new definition.\<close>
 
 theory Infsetsum
-  imports "HOL-Analysis.Infinite_Set_Sum"
-    Jordan_Normal_Form.Conjugate
-    \<comment> \<open>\<^theory>\<open>Jordan_Normal_Form.Conjugate\<close> contains the instantiation \<open>complex :: ord\<close>.
-               If we define our own instantiation, it would be impossible to load both
-               \<^session>\<open>Jordan_Normal_Form\<close> and this theory.\<close>
+  imports "HOL-Analysis.Infinite_Set_Sum" Complex_Order
 begin
 
 subsection \<open>General properties\<close>
 
-lemma 
+lemma
   assumes "\<And>F. finite F \<Longrightarrow> F\<subseteq>S \<Longrightarrow> sum (\<lambda>x. norm (f x)) F \<le> B"
   shows abs_summable_finite_sumsI: "f abs_summable_on S"
   and infsetsum_finite_sums_bound: "B \<ge> 0 \<Longrightarrow> norm (infsetsum f S) \<le> B"
@@ -895,7 +891,7 @@ proof -
         by presburger
       thus ?thesis unfolding F_def indicator_def
         using mult.right_neutral mult_zero_right nn_integral_cong
-        by blast
+        by (simp add: of_bool_def) 
     qed
     also have "\<dots> = integral\<^sup>N (count_space F) g"
       by (simp add: nn_integral_restrict_space[symmetric] restrict_count_space)
@@ -1025,16 +1021,16 @@ lemma infsetsum_mono_neutral_complex:
 proof -
   have \<open>infsetsum (\<lambda>x. Re (f x)) A \<le> infsetsum (\<lambda>x. Re (g x)) B\<close>
     apply (rule infsetsum_mono_neutral)
-    using assms by (auto intro!: abs_summable_Re)
+    using assms by (auto intro!: abs_summable_Re simp: less_eq_complex_def)
   then have Re: \<open>Re (infsetsum f A) \<le> Re (infsetsum g B)\<close>
     by (metis assms(1-2) Re_infsetsum)
   have \<open>infsetsum (\<lambda>x. Im (f x)) A = infsetsum (\<lambda>x. Im (g x)) B\<close>
     apply (rule infsetsum_cong_neutral)
-    using assms by (auto intro!: abs_summable_Re)
+    using assms by (auto intro!: abs_summable_Re simp: less_eq_complex_def)
   then have Im: \<open>Im (infsetsum f A) = Im (infsetsum g B)\<close>
     by (metis assms(1-2) Im_infsetsum)
   from Re Im show ?thesis
-    by auto
+    by (auto simp: less_eq_complex_def)
 qed
 
 lemma infsetsum_mono_complex:
@@ -1103,6 +1099,5 @@ proof
     using that abs_summable_on_norm_iff[symmetric]
       abs_summable_on_comparison_test by fastforce 
 qed
-
 
 end

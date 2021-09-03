@@ -40,8 +40,7 @@ lemma abs_summable_infsum_exists: \<^latex>\<open>\label{lemma:abs_summable_infs
   fixes f :: "'a\<Rightarrow>'b::{second_countable_topology,banach}" and A :: "'a set"
   assumes "f abs_summable_on A"
   shows "infsum_exists f A"
-  apply (rule infsum_exists_norm_infsum_exists)
-  by (simp add: assms norm_infsum_exists_iff_abs_summable_on)
+  by (simp add: assms infsum_abs_convergent_exists norm_infsum_exists_iff_abs_summable_on)
 
 text \<open>The converse of @{thm [source] abs_summable_infsum_exists} does not hold:
   Consider the Hilbert space of square-summable sequences.

@@ -38,10 +38,7 @@ theory Infinite_Sum
     Infinite_Sum_Misc
     "HOL-Analysis.Elementary_Topology"
     "HOL-Library.Extended_Nonnegative_Real"
-    Jordan_Normal_Form.Conjugate
-    \<comment> \<open>\<^theory>\<open>Jordan_Normal_Form.Conjugate\<close> contains the instantiation \<open>complex :: ord\<close>.
-               If we define our own instantiation, it would be impossible to load both
-               \<^session>\<open>Jordan_Normal_Form\<close> and this theory.\<close>
+    Complex_Order
 begin
 
 subsection \<open>Definition and syntax\<close>
@@ -58,29 +55,41 @@ definition infsum :: "('a \<Rightarrow> 'b::{comm_monoid_add,t2_space}) \<Righta
 abbreviation infsum_abs_convergent :: "('a \<Rightarrow> 'b::real_normed_vector) \<Rightarrow> 'a set \<Rightarrow> bool" where
   "infsum_abs_convergent f A \<equiv> infsum_exists (\<lambda>x. norm (f x)) A"
 
-text \<open>The following code for the syntax of \<^const>\<open>infsum\<close> is taken with minor modification
-      from Isabelle2021, \<open>Infinite_Set_Sum.thy\<close>\<close>
+abbreviation has_sum (infixr "has'_sum" 46) where
+  "(f has_sum S) A \<equiv> infsum_is f S A"
+
+abbreviation summable_on (infixr "summable'_on" 46) where
+  "f summable_on A \<equiv> infsum_exists f A"
+
+(* Note: This collides with the syntax from Infinite_Set_Sum.
+   We can introduce it when we remove Infinite_Set_Sum. *)
+(* abbreviation abs_summable_on (infixr "abs'_summable'_on" 46) where
+  "f abs_summable_on A \<equiv> infsum_abs_convergent f A" *)
+
+syntax (ASCII)
+  "_infsum" :: "pttrn \<Rightarrow> 'a set \<Rightarrow> 'b \<Rightarrow> 'b::topological_comm_monoid_add"  ("(3INFSUM (_/:_)./ _)" [0, 51, 10] 10)
 syntax
-  "_infsum" :: "pttrn \<Rightarrow> 'a set \<Rightarrow> 'b \<Rightarrow> 'b::{comm_monoid_add, t2_space}"
-  ("(2\<Sum>\<^sub>\<infinity>_\<in>_./ _)" [0, 51, 10] 10)
+  "_infsum" :: "pttrn \<Rightarrow> 'a set \<Rightarrow> 'b \<Rightarrow> 'b::topological_comm_monoid_add"  ("(2\<Sum>\<^sub>\<infinity>(_/\<in>_)./ _)" [0, 51, 10] 10)
 translations \<comment> \<open>Beware of argument permutation!\<close>
   "\<Sum>\<^sub>\<infinity>i\<in>A. b" \<rightleftharpoons> "CONST infsum (\<lambda>i. b) A"
 
+syntax (ASCII)
+  "_univinfsum" :: "pttrn \<Rightarrow> 'a \<Rightarrow> 'a"  ("(3INFSUM _./ _)" [0, 10] 10)
 syntax
-  "_uinfsum" :: "pttrn \<Rightarrow> 'b \<Rightarrow> 'b::{comm_monoid_add, t2_space}"
-  ("(2\<Sum>\<^sub>\<infinity>_./ _)" [0, 10] 10)
-translations \<comment> \<open>Beware of argument permutation!\<close>
-  "\<Sum>\<^sub>\<infinity>i. b" \<rightleftharpoons> "CONST infsum (\<lambda>i. b) (CONST UNIV)"
-
-syntax
-  "_qinfsum" :: "pttrn \<Rightarrow> bool \<Rightarrow> 'a \<Rightarrow> 'a::{comm_monoid_add, t2_space}"
-  ("(2\<Sum>\<^sub>\<infinity>_ | (_)./ _)" [0, 0, 10] 10)
+  "_univinfsum" :: "pttrn \<Rightarrow> 'a \<Rightarrow> 'a"  ("(2\<Sum>\<^sub>\<infinity>_./ _)" [0, 10] 10)
 translations
-  "\<Sum>\<^sub>\<infinity>x|P. t" \<rightharpoonup> "CONST infsum (\<lambda>x. t) {x. P}"
+  "\<Sum>\<^sub>\<infinity>x. t" \<rightleftharpoons> "CONST infsum (\<lambda>x. t) (CONST UNIV)"
+
+syntax (ASCII)
+  "_qinfsum" :: "pttrn \<Rightarrow> bool \<Rightarrow> 'a \<Rightarrow> 'a"  ("(3INFSUM _ |/ _./ _)" [0, 0, 10] 10)
+syntax
+  "_qinfsum" :: "pttrn \<Rightarrow> bool \<Rightarrow> 'a \<Rightarrow> 'a"  ("(2\<Sum>\<^sub>\<infinity>_ | (_)./ _)" [0, 0, 10] 10)
+translations
+  "\<Sum>\<^sub>\<infinity>x|P. t" => "CONST infsum (\<lambda>x. t) {x. P}"
 
 print_translation \<open>
 let
-  fun sum_tr' [Abs (x, Tx, t), Const (\<^const_syntax>\<open>Collect\<close>, _) $ Abs (y, Ty, P)] =
+  fun sum_tr' [Abs (x, Tx, t), Const (@{const_syntax Collect}, _) $ Abs (y, Ty, P)] =
         if x <> y then raise Match
         else
           let
@@ -88,10 +97,10 @@ let
             val t' = subst_bound (x', t);
             val P' = subst_bound (x', P);
           in
-            Syntax.const \<^syntax_const>\<open>_qinfsum\<close> $ Syntax_Trans.mark_bound_abs (x, Tx) $ P' $ t'
+            Syntax.const @{syntax_const "_qinfsum"} $ Syntax_Trans.mark_bound_abs (x, Tx) $ P' $ t'
           end
     | sum_tr' _ = raise Match;
-in [(\<^const_syntax>\<open>infsum\<close>, K sum_tr')] end
+in [(@{const_syntax infsum}, K sum_tr')] end
 \<close>
 
 subsection \<open>General properties\<close>
@@ -265,11 +274,36 @@ proof -
     unfolding infsum_exists_def infsum_is_def by auto
 qed
 
+(* lemma aux: \<open>(\<And>x. P x \<Longrightarrow> Q (f x)) \<Longrightarrow> Ex P \<Longrightarrow> Ex Q\<close>
+  by auto *)
+
 lemma
   fixes f :: "'a \<Rightarrow> 'b::{topological_ab_group_add}"
   assumes \<open>infsum_is f B b\<close> and \<open>infsum_is f A a\<close> and AB: "A \<subseteq> B"
   shows infsum_is_Diff: "infsum_is f (B - A) (b - a)"
 proof -
+  have finite_subsets1:
+    "finite_subsets_at_top (B - A) \<le> filtermap (\<lambda>F. F - A) (finite_subsets_at_top B)"
+  proof (rule filter_leI)
+    fix P assume "eventually P (filtermap (\<lambda>F. F - A) (finite_subsets_at_top B))"
+    then obtain X where "finite X" and "X \<subseteq> B" 
+      and P: "finite Y \<and> X \<subseteq> Y \<and> Y \<subseteq> B \<longrightarrow> P (Y - A)" for Y
+      unfolding eventually_filtermap eventually_finite_subsets_at_top by auto
+
+    hence "finite (X-A)" and "X-A \<subseteq> B - A"
+      by auto
+    moreover have "finite Y \<and> X-A \<subseteq> Y \<and> Y \<subseteq> B - A \<longrightarrow> P Y" for Y
+      using P[where Y="Y\<union>X"] \<open>finite X\<close> \<open>X \<subseteq> B\<close>
+      by (metis Diff_subset Int_Diff Un_Diff finite_Un inf.orderE le_sup_iff sup.orderE sup_ge2)
+    ultimately show "eventually P (finite_subsets_at_top (B - A))"
+      unfolding eventually_finite_subsets_at_top by meson
+  qed
+  have finite_subsets2: 
+    "filtermap (\<lambda>F. F \<inter> A) (finite_subsets_at_top B) \<le> finite_subsets_at_top A"
+    apply (rule filter_leI)
+      using assms unfolding eventually_filtermap eventually_finite_subsets_at_top
+      by (metis Int_subset_iff finite_Int inf_le2 subset_trans)
+
   from assms(1) have limB: "(sum f \<longlongrightarrow> b) (finite_subsets_at_top B)"
     using infsum_is_def by auto
   from assms(2) have limA: "(sum f \<longlongrightarrow> a) (finite_subsets_at_top A)"
@@ -280,9 +314,10 @@ proof -
       unfolding o_def by auto
     show "((sum f \<circ> (\<lambda>F. F \<inter> A)) \<longlongrightarrow> a) (finite_subsets_at_top B)"
       unfolding o_def 
-      using tendsto_compose_filtermap finite_subsets_at_top_inter[OF AB] limA tendsto_mono
+      using tendsto_compose_filtermap finite_subsets2 limA tendsto_mono
         \<open>(\<lambda>F. sum f (F \<inter> A)) = sum f \<circ> (\<lambda>F. F \<inter> A)\<close> by fastforce
   qed
+
   with limB have "((\<lambda>F. sum f F - sum f (F\<inter>A)) \<longlongrightarrow> b - a) (finite_subsets_at_top B)"
     using tendsto_diff by blast
   have "sum f X - sum f (X \<inter> A) = sum f (X - A)" if "finite X" and "X \<subseteq> B" for X :: "'a set"
@@ -295,7 +330,8 @@ proof -
   hence "(sum f \<longlongrightarrow> b - a) (filtermap (\<lambda>F. F-A) (finite_subsets_at_top B))"
     by (subst tendsto_compose_filtermap[symmetric], simp add: o_def)
   hence limBA: "(sum f \<longlongrightarrow> b - a) (finite_subsets_at_top (B-A))"
-    using finite_subsets_at_top_minus[OF AB] by (rule tendsto_mono[rotated])
+    apply (rule tendsto_mono[rotated])
+    by (rule finite_subsets1)
   thus ?thesis
     by (simp add: infsum_is_def)
 qed
@@ -696,7 +732,7 @@ text \<open>The following lemma indeed needs a complete space (as formalized by 
 lemma infsum_exists_subset:
   fixes A B and f :: \<open>'a \<Rightarrow> 'b::{ab_group_add, uniform_space}\<close>
   assumes \<open>complete (UNIV :: 'b set)\<close>
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'b,y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'b,y). x+y)\<close>
   assumes \<open>infsum_exists f A\<close>
   assumes \<open>B \<subseteq> A\<close>
   shows \<open>infsum_exists f B\<close>
@@ -714,7 +750,7 @@ proof -
     fix E :: \<open>('b\<times>'b) \<Rightarrow> bool\<close> assume \<open>eventually E uniformity\<close>
     then obtain E' where \<open>eventually E' uniformity\<close> and E'E'E: \<open>E' (x, y) \<longrightarrow> E' (y, z) \<longrightarrow> E (x, z)\<close> for x y z
       using uniformity_trans by blast
-    from plus_cont[simplified uniformly_continuous2_def filterlim_def le_filter_def, rule_format, 
+    from plus_cont[simplified uniformly_continuous_on_uniformity filterlim_def le_filter_def, rule_format, 
                    OF \<open>eventually E' uniformity\<close>]
     obtain D where \<open>eventually D uniformity\<close> and DE: \<open>D (x, y) \<Longrightarrow> E' (x+c, y+c)\<close> for x y c
       apply atomize_elim
@@ -1010,12 +1046,12 @@ lemma
 lemma
   assumes \<open>inj_on h A\<close>
   shows infsum_reindex: \<open>infsum g (h ` A) = infsum (g \<circ> h) A\<close>
-  by (metis (no_types, hide_lams) assms finite_subsets_at_top_neq_bot infsum_def infsum_exists_reindex infsum_is_def infsum_is_infsum infsum_is_reindex tendsto_Lim)
+  by (metis (no_types, opaque_lifting) assms finite_subsets_at_top_neq_bot infsum_def infsum_exists_reindex infsum_is_def infsum_is_infsum infsum_is_reindex tendsto_Lim)
 
 lemma infsum_is_Sigma:
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{comm_monoid_add,uniform_space}\<close>
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'c,y). x+y)\<close>
   assumes summableAB: "infsum_is f (Sigma A B) a"
   assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_is (\<lambda>y. f (x, y)) (B x) (b x)\<close>
   shows "infsum_is b A a"
@@ -1123,7 +1159,7 @@ qed
 lemma infsum_exists_Sigma:
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add, t2_space, uniform_space}\<close>
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'c,y). x+y)\<close>
   assumes summableAB: "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
   assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
   shows \<open>infsum_exists (\<lambda>x. infsum (f x) (B x)) A\<close>
@@ -1140,7 +1176,7 @@ qed
 lemma infsum_Sigma:
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<times> 'b \<Rightarrow> 'c::{comm_monoid_add, t2_space, uniform_space}\<close>
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'c,y). x+y)\<close>
   assumes summableAB: "infsum_exists f (Sigma A B)"
   assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (\<lambda>y. f (x, y)) (B x)\<close>
   shows "infsum f (Sigma A B) = infsum (\<lambda>x. infsum (\<lambda>y. f (x, y)) (B x)) A"
@@ -1156,7 +1192,7 @@ qed
 lemma infsum_Sigma':
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"
     and f :: \<open>'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add, t2_space, uniform_space}\<close>
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'c,y). x+y)\<close>
   assumes summableAB: "infsum_exists (\<lambda>(x,y). f x y) (Sigma A B)"
   assumes summableB: \<open>\<And>x. x\<in>A \<Longrightarrow> infsum_exists (f x) (B x)\<close>
   shows \<open>infsum (\<lambda>x. infsum (f x) (B x)) A = infsum (\<lambda>(x,y). f x y) (Sigma A B)\<close>
@@ -1200,7 +1236,7 @@ lemma infsum_Sigma_banach:
 lemma infsum_swap:
   fixes A :: "'a set" and B :: "'b set"
   fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::{comm_monoid_add,t2_space,uniform_space}"
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'c,y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'c,y). x+y)\<close>
   assumes \<open>infsum_exists (\<lambda>(x, y). f x y) (A \<times> B)\<close>
   assumes \<open>\<And>a. a\<in>A \<Longrightarrow> infsum_exists (f a) B\<close>
   assumes \<open>\<And>b. b\<in>B \<Longrightarrow> infsum_exists (\<lambda>a. f a b) A\<close>
@@ -1780,10 +1816,11 @@ lemma infsum_0D_complex:
 proof -
   have \<open>Im (f x) = 0\<close>
     apply (rule infsum_0D[where A=A])
-    using assms by (auto simp add: abs_sum infsum_exists_Im infsum_Im)
+    using assms
+    by (auto simp add: infsum_Im infsum_exists_Im less_eq_complex_def)
   moreover have \<open>Re (f x) = 0\<close>
     apply (rule infsum_0D[where A=A])
-    using assms by (auto simp add: abs_sum infsum_exists_Re infsum_Re)
+    using assms by (auto simp add: infsum_exists_Re infsum_Re less_eq_complex_def)
   ultimately show ?thesis
     by (simp add: complex_eqI)
 qed
@@ -1809,18 +1846,17 @@ lemma infsum_mono_neutral_complex:
 proof -
   have \<open>infsum (\<lambda>x. Re (f x)) A \<le> infsum (\<lambda>x. Re (g x)) B\<close>
     apply (rule infsum_mono_neutral)
-    using assms(3-5) by (auto simp add: infsum_exists_Re)
+    using assms(3-5) by (auto simp add: infsum_exists_Re less_eq_complex_def)
   then have Re: \<open>Re (infsum f A) \<le> Re (infsum g B)\<close>
     by (metis assms(1-2) infsum_Re)
   have \<open>infsum (\<lambda>x. Im (f x)) A = infsum (\<lambda>x. Im (g x)) B\<close>
     apply (rule infsum_cong_neutral)
-    using assms(3-5) by (auto simp add: infsum_exists_Re)
+    using assms(3-5) by (auto simp add: infsum_exists_Re less_eq_complex_def)
   then have Im: \<open>Im (infsum f A) = Im (infsum g B)\<close>
     by (metis assms(1-2) infsum_Im)
   from Re Im show ?thesis
-    by auto
+    by (auto simp: less_eq_complex_def)
 qed
-
 
 lemma infsum_mono_complex:
   \<comment> \<open>For \<^typ>\<open>real\<close>, @{thm [source] infsum_mono} can be used. 
@@ -1852,7 +1888,7 @@ proof -
   also have \<open>\<dots> = infsum f M\<close>
     apply (rule infsum_cong)
     using fnn
-    using cmod_eq_Re complex_is_Real_iff by force
+    using cmod_eq_Re complex_is_Real_iff less_eq_complex_def by force
   finally show ?thesis
     by (metis abs_of_nonneg infsum_def le_less_trans norm_ge_zero norm_infsum_bound norm_of_real not_le order_refl)
 qed

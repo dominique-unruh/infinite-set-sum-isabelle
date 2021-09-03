@@ -11,7 +11,7 @@ theory Infinite_Sum_Misc
 begin
 
 
-lemma on_filter_baseE:
+(* lemma on_filter_baseE:
   assumes ev_INF: \<open>eventually P (INF e\<in>E. principal {x. R e x})\<close>
   assumes [simp]: \<open>E \<noteq> {}\<close>
   assumes \<open>\<And>a b. a \<in> E \<Longrightarrow> b \<in> E \<Longrightarrow> \<exists>x\<in>E. Collect (R x) \<subseteq> Collect (R a) \<and> Collect (R x) \<subseteq> Collect (R b)\<close>
@@ -29,9 +29,9 @@ proof -
     by (metis le_boolE monoE)
   with rewritten \<open>e \<in> E\<close> show \<open>Q P\<close>
     by auto
-qed
+qed *)
 
-lemma on_filter_base_uniformity_distE:
+(* lemma on_filter_base_uniformity_distE:
   fixes P :: \<open>('a\<times>'a::{uniform_space,metric_space}) \<Rightarrow> bool\<close>
   assumes uni: \<open>eventually P uniformity\<close>
   assumes Q_mono: \<open>mono Q\<close>
@@ -42,18 +42,31 @@ lemma on_filter_base_uniformity_distE:
   apply (erule on_filter_baseE)
      apply (auto intro!: rewritten simp: Q_mono)
   subgoal for a b by (auto intro!: bexI[of _ \<open>min a b\<close>])
-  by -
+  by - *)
 
+
+(* thm eventually_INF_base
+lemma eventually_uniformity_dist_base:
+  shows \<open>eventually P uniformity \<longleftrightarrow> (\<exists>b>0. \<forall>x y. dist x y < b \<longrightarrow> P (x,y))\<close>
+  unfolding uniformity_dist
+  apply (subst eventually_INF_base)
+    apply auto[1]
+   apply (rule_tac x=\<open>min a b\<close> in bexI)
+    apply auto[2]
+  unfolding eventually_principal
+  apply auto
+  by - *)
+
+(* setup \<open>Sign.add_const_constraint (\<^const_name>\<open>dist\<close>, SOME \<^typ>\<open>'a::dist \<Rightarrow> 'a \<Rightarrow> real\<close>)\<close>
 
 lemma cauchy_filter_metric:
-  fixes F :: "'a::metric_space filter"
+  fixes F :: "'a::{uniformity_dist,uniform_space} filter"
   shows "cauchy_filter F \<longleftrightarrow> (\<forall>e. e>0 \<longrightarrow> (\<exists>P. eventually P F \<and> (\<forall>x y. P x \<and> P y \<longrightarrow> dist x y < e)))"
 proof (unfold cauchy_filter_def le_filter_def, auto)
   assume assm: \<open>\<forall>e>0. \<exists>P. eventually P F \<and> (\<forall>x y. P x \<and> P y \<longrightarrow> dist x y < e)\<close>
   then show \<open>eventually P uniformity \<Longrightarrow> eventually P (F \<times>\<^sub>F F)\<close> for P
-    apply (erule_tac on_filter_base_uniformity_distE)
-    apply (auto simp: mono_def case_prod_beta eventually_prod_same)
-    apply (metis predicate1D) by metis
+    apply (auto simp: eventually_uniformity_metric)
+    using eventually_prod_same by blast
 next
   fix e :: real
   assume \<open>e > 0\<close>
@@ -68,6 +81,7 @@ next
 qed
 
 lemma cauchy_filter_metric_filtermap:
+  fixes f :: "'a \<Rightarrow> 'b::{uniformity_dist,uniform_space}"
   shows "cauchy_filter (filtermap f F) \<longleftrightarrow> (\<forall>e. e>0 \<longrightarrow> (\<exists>P. eventually P F \<and> (\<forall>x y. P x \<and> P y \<longrightarrow> dist (f x) (f y) < e)))"
 proof (subst cauchy_filter_metric, intro iffI allI impI)
   assume \<open>\<forall>e>0. \<exists>P. eventually P (filtermap f F) \<and> (\<forall>x y. P x \<and> P y \<longrightarrow> dist x y < e)\<close>
@@ -85,15 +99,30 @@ next
     by (smt (verit, ccfv_SIG) eventually_elim2)
 qed
 
+setup \<open>Sign.add_const_constraint (\<^const_name>\<open>dist\<close>, SOME \<^typ>\<open>'a::metric_space \<Rightarrow> 'a \<Rightarrow> real\<close>)\<close>
+ *)
+
+(* thm tendsto_add_const_iff
 lemma tendsto_add_const_iff:
   \<comment> \<open>This is a generalization of \<open>Limits.tendsto_add_const_iff\<close>, 
       the only difference is that the sort here is more general.\<close>
   "((\<lambda>x. c + f x :: 'a::topological_group_add) \<longlongrightarrow> c + d) F \<longleftrightarrow> (f \<longlongrightarrow> d) F"
   using tendsto_add[OF tendsto_const[of c], of f d]
-    and tendsto_add[OF tendsto_const[of "-c"], of "\<lambda>x. c + f x" "c + d"] by auto
+    and tendsto_add[OF tendsto_const[of "-c"], of "\<lambda>x. c + f x" "c + d"] by auto *)
 
-
-lemma finite_subsets_at_top_minus: 
+(* lemma finite_subsets_at_top_superset: 
+  assumes "A\<subseteq>B"
+  shows "filtermap (\<lambda>F. F \<inter> A) (finite_subsets_at_top B) \<le> finite_subsets_at_top A"
+proof (rule filter_leI)
+  show "eventually P (filtermap (\<lambda>F. F \<inter> A) (finite_subsets_at_top B))"
+    if "eventually P (finite_subsets_at_top A)"
+    for P :: "'a set \<Rightarrow> bool"
+    using that unfolding eventually_filtermap
+    unfolding eventually_finite_subsets_at_top
+    by (metis Int_subset_iff assms finite_Int inf_le2 subset_trans)
+qed
+ *)
+(* lemma finite_subsets_at_top_minus: 
   assumes "A\<subseteq>B"
   shows "finite_subsets_at_top (B - A) \<le> filtermap (\<lambda>F. F - A) (finite_subsets_at_top B)"
 proof (rule filter_leI)
@@ -111,28 +140,16 @@ proof (rule filter_leI)
     unfolding eventually_finite_subsets_at_top by meson
 qed
 
-lemma finite_subsets_at_top_inter: 
-  assumes "A\<subseteq>B"
-  shows "filtermap (\<lambda>F. F \<inter> A) (finite_subsets_at_top B) \<le> finite_subsets_at_top A"
-proof (rule filter_leI)
-  show "eventually P (filtermap (\<lambda>F. F \<inter> A) (finite_subsets_at_top B))"
-    if "eventually P (finite_subsets_at_top A)"
-    for P :: "'a set \<Rightarrow> bool"
-    using that unfolding eventually_filtermap
-    unfolding eventually_finite_subsets_at_top
-    by (metis Int_subset_iff assms finite_Int inf_le2 subset_trans)
-qed
+ *)
 
 
-lemma tendsto_principal_singleton:
-  shows "(f \<longlongrightarrow> f x) (principal {x})"
-  unfolding tendsto_def eventually_principal by simp
-
+(* 
 lemma isCont_ennreal[simp]: \<open>isCont ennreal x\<close>
   apply (rule continuous_at_sequentiallyI)
   by simp
+ *)
 
-lemma tendsto_iff_uniformity:
+(* lemma tendsto_iff_uniformity:
   fixes l :: \<open>'b :: uniform_space\<close>
   shows \<open>(f \<longlongrightarrow> l) F \<longleftrightarrow> (\<forall>E. eventually E uniformity \<longrightarrow> (\<forall>\<^sub>F x in F. E (f x, l)))\<close>
 proof (intro iffI allI impI)
@@ -161,14 +178,16 @@ next
   then show \<open>(f \<longlongrightarrow> l) F\<close>
     by (simp add: filterlim_def le_filter_def eventually_nhds_uniformity)
 qed
+ *)
 
+(*
 text \<open>The following should be the definition of \<^const>\<open>uniformity\<close> in an instantiation of \<open>prod :: (uniformity,uniformity) uniformity\<close>.
   However, we cannot define this instantiation because it would conflict with the existing 
   instantiation \<open>prod :: (metric_space, metric_space) uniformity_dist\<close> in \<^theory>\<open>HOL-Analysis.Product_Vector\<close>.
   Ideally, the latter instantiation would be replaced by \<open>prod :: (uniformity,uniformity) uniformity\<close>
   with the definition of \<^term>\<open>uniformity_prod\<close> below.
   The existing definition (@{thm [source] uniformity_prod_def}) could then be derived as a corollary.
-  (See \<open>uniformity_prod_compatible\<close> below.)
+  (See \<open>uniformity_prod_metric\<close> below.)
   Then the definition of \<open>uniformly_continuous2\<close> below would be unnecessary because it would be
   equivalent to \<open>uniformly_continuous_on UNIV\<close>.\<close>
 definition \<open>uniformity_prod = (filtermap (\<lambda>((x1,x2),(y1,y2)). ((x1,y1),(x2,y2))) (uniformity \<times>\<^sub>F uniformity))\<close>
@@ -222,43 +241,20 @@ next
     apply (rule eventually_INF1[where i=e])
     using \<open>e > 0\<close> * by (auto simp: eventually_principal)
 qed
+*)
 
-lemma uniformly_continuous2_metricI:
-  fixes f :: \<open>('a::metric_space \<times> 'b::metric_space) \<Rightarrow> 'c::metric_space\<close>
-  assumes \<open>\<forall>e>0. \<exists>d>0. \<forall>(x::'a) y (x'::'b) y'. dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (f (x, x')) (f (y, y')) < e\<close>
-  shows \<open>uniformly_continuous2 f\<close>
-proof -
-  have \<open>\<forall>\<^sub>F ((x,y),(x',y')) in uniformity \<times>\<^sub>F uniformity. dist (f (x,x')) (f (y,y')) < e\<close> if \<open>e > 0\<close> for e
-  proof -
-    obtain d where \<open>d > 0\<close> and d: \<open>dist x y < d \<longrightarrow> dist x' y' < d \<longrightarrow> dist (f (x,x')) (f (y,y')) < e\<close> for x y x' y'
-      using assms(1) \<open>0 < e\<close> by blast
-    have \<open>\<forall>\<^sub>F ((x,y),(x',y')) in uniformity \<times>\<^sub>F uniformity. dist x y < d \<and> dist x' y' < d\<close>
-      unfolding case_prod_unfold apply (rule eventually_prodI)
-      using eventually_uniformity_metric \<open>d > 0\<close> by force+
-    then show ?thesis
-      apply (rule eventually_mono)
-      using d by auto
-  qed
-  then have \<open>eventually (\<lambda>((x,y),(x',y')). E (f (x,x'), f (y,y'))) (uniformity \<times>\<^sub>F uniformity)\<close> if \<open>eventually E uniformity\<close> for E
-    apply (rule_tac on_filter_base_uniformity_distE[OF \<open>eventually E uniformity\<close>])
-    by (auto simp: eventually_mono mono_def le_fun_def case_prod_unfold)
-  then show ?thesis
-    by (auto simp: uniformly_continuous2_def filterlim_def le_filter_def eventually_filtermap
-        case_prod_unfold uniformity_prod_def)
-qed
-
-lemma uniformly_continuous2_plus_real_normed_vector[simp]:
-  shows \<open>uniformly_continuous2 (\<lambda>(x::'a::real_normed_vector,y). x+y)\<close>
-proof (rule uniformly_continuous2_metricI, intro allI impI, simp)
+(* lemma isUCont_plus[simp]:
+  shows \<open>isUCont (\<lambda>(x::'a::real_normed_vector,y). x+y)\<close>
+proof (rule isUCont_prod_metric[THEN iffD2], intro allI impI, simp)
   fix e :: real assume \<open>0 < e\<close>
   show \<open>\<exists>d>0. \<forall>x y :: 'a. dist x y < d \<longrightarrow> (\<forall>x' y'. dist x' y' < d \<longrightarrow> dist (x + x') (y + y') < e)\<close>
     apply (rule exI[of _ \<open>e/2\<close>])
     using \<open>0 < e\<close> apply auto
     by (smt (verit, ccfv_SIG) dist_add_cancel dist_add_cancel2 dist_commute dist_triangle_lt)
-qed
+qed *)
 
 lemma sum_uniformity:
-  assumes plus_cont: \<open>uniformly_continuous2 (\<lambda>(x::'b::{uniform_space,comm_monoid_add},y). x+y)\<close>
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'b::{uniform_space,comm_monoid_add},y). x+y)\<close>
   assumes \<open>eventually E uniformity\<close>
   obtains D where \<open>eventually D uniformity\<close> 
     and \<open>\<And>M::'a set. \<And>f f' :: 'a \<Rightarrow> 'b. card M \<le> n \<and> (\<forall>m\<in>M. D (f m, f' m)) \<Longrightarrow> E (sum f M, sum f' M)\<close>
@@ -268,8 +264,7 @@ proof (atomize_elim, insert \<open>eventually E uniformity\<close>, induction n 
     by (metis card_eq_0_iff equals0D le_zero_eq sum.infinite sum.not_neutral_contains_not_neutral uniformity_refl)
 next
   case (Suc n)
-  
-  from plus_cont[unfolded uniformly_continuous2_def filterlim_def le_filter_def, rule_format, OF Suc.prems]
+  from plus_cont[unfolded uniformly_continuous_on_uniformity filterlim_def le_filter_def, rule_format, OF Suc.prems]
   obtain D1 D2 where \<open>eventually D1 uniformity\<close> and \<open>eventually D2 uniformity\<close> 
     and D1D2E: \<open>D1 (x, y) \<Longrightarrow> D2 (x', y') \<Longrightarrow> E (x + x', y + y')\<close> for x y x' y'
     apply atomize_elim
@@ -320,24 +315,14 @@ next
     by auto
 qed
 
-lemma ennreal_of_enat_plus[simp]: \<open>ennreal_of_enat (a+b) = ennreal_of_enat a + ennreal_of_enat b\<close>
-  apply (induction a)
-  apply auto
-  by (smt (z3) add.commute add.right_neutral enat.exhaust enat.simps(4) enat.simps(5) ennreal_add_left_cancel ennreal_of_enat_def infinity_ennreal_def of_nat_add of_nat_eq_enat plus_enat_simps(2))
-
-lemma sum_ennreal_of_enat[simp]: "(\<Sum>i\<in>I. ennreal_of_enat (f i)) = ennreal_of_enat (sum f I)"
-  apply (induction I rule: infinite_finite_induct) 
-  by (auto simp: sum_nonneg)
-
-lemma isCont_ennreal_of_enat[simp]: \<open>isCont ennreal_of_enat x\<close>
+(* lemma isCont_ennreal_of_enat[simp]: \<open>isCont ennreal_of_enat x\<close>
 proof (subst continuous_at_open, intro allI impI, cases \<open>x = \<infinity>\<close>)
   case True
-  note True[simp]
 
   fix t assume \<open>open t \<and> ennreal_of_enat x \<in> t\<close>
   then have \<open>\<exists>y<\<infinity>. {y <.. \<infinity>} \<subseteq> t\<close>
     apply (rule_tac open_left[where y=0])
-    by auto
+    by (auto simp: True)
   then obtain y where \<open>{y<..} \<subseteq> t\<close> and \<open>y \<noteq> \<infinity>\<close>
     apply atomize_elim
     apply (auto simp: greaterThanAtMost_def)
@@ -350,7 +335,7 @@ proof (subst continuous_at_open, intro allI impI, cases \<open>x = \<infinity>\<
   have \<open>open s\<close>
     by (simp add: s_def)
   moreover have \<open>x \<in> s\<close>
-    by (simp add: \<open>x' \<noteq> \<infinity>\<close> s_def)
+    by (simp add: \<open>x' \<noteq> \<infinity>\<close> s_def True)
   moreover have \<open>ennreal_of_enat z \<in> t\<close> if \<open>z \<in> s\<close> for z
     by (metis x'y \<open>{y<..} \<subseteq> t\<close> ennreal_of_enat_le_iff greaterThan_iff le_less_trans less_imp_le not_less s_def subsetD that)
   ultimately show \<open>\<exists>s. open s \<and> x \<in> s \<and> (\<forall>z\<in>s. ennreal_of_enat z \<in> t)\<close>
@@ -367,7 +352,6 @@ next
     using asm s_def that by blast
   ultimately show \<open>\<exists>s. open s \<and> x \<in> s \<and> (\<forall>z\<in>s. ennreal_of_enat z \<in> t)\<close>
     by auto
-qed
-
+qed *)
 
 end
