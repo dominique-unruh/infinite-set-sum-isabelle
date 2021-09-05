@@ -35,7 +35,6 @@ theory \<open>Infsetsum_Infsum\<close> (\autoref{section:Infsetsum_Infsum}).\<cl
 
 theory Infinite_Sum
   imports
-    Infinite_Sum_Misc
     "HOL-Analysis.Elementary_Topology"
     "HOL-Library.Extended_Nonnegative_Real"
     Complex_Order
@@ -511,6 +510,16 @@ proof -
   then show ?thesis
     using infsum_exists_def infsum_is_def by blast
 qed
+
+text \<open>The converse of @{thm [source] infsum_abs_convergent_exists} does not hold:
+  Consider the Hilbert space of square-summable sequences.
+  Let $e_i$ denote the sequence with 1 in the $i$th position and 0 elsewhere.
+  Let $f(i) := e_i/i$ for $i\geq1$. We have \<^term>\<open>\<not> f abs_summable_on UNIV\<close> because $\lVert f(i)\rVert=1/i$
+  and thus the sum over $\lVert f(i)\rVert$ diverges. On the other hand, we have \<^term>\<open>infsum_exists f UNIV\<close>;
+  the limit is the sequence with $1/i$ in the $i$th position.
+
+  (We have not formalized this separating example here because to the best of our knowledge,
+  this Hilbert space has not been formalized in Isabelle/HOL yet.)\<close>
 
 lemma norm_infsum_is_bound:
   fixes f :: "'b \<Rightarrow> 'a::real_normed_vector"
@@ -1047,6 +1056,69 @@ lemma
   assumes \<open>inj_on h A\<close>
   shows infsum_reindex: \<open>infsum g (h ` A) = infsum (g \<circ> h) A\<close>
   by (metis (no_types, opaque_lifting) assms finite_subsets_at_top_neq_bot infsum_def infsum_exists_reindex infsum_is_def infsum_is_infsum infsum_is_reindex tendsto_Lim)
+
+
+lemma sum_uniformity:
+  assumes plus_cont: \<open>uniformly_continuous_on UNIV (\<lambda>(x::'b::{uniform_space,comm_monoid_add},y). x+y)\<close>
+  assumes \<open>eventually E uniformity\<close>
+  obtains D where \<open>eventually D uniformity\<close> 
+    and \<open>\<And>M::'a set. \<And>f f' :: 'a \<Rightarrow> 'b. card M \<le> n \<and> (\<forall>m\<in>M. D (f m, f' m)) \<Longrightarrow> E (sum f M, sum f' M)\<close>
+proof (atomize_elim, insert \<open>eventually E uniformity\<close>, induction n arbitrary: E rule:nat_induct)
+  case 0
+  then show ?case
+    by (metis card_eq_0_iff equals0D le_zero_eq sum.infinite sum.not_neutral_contains_not_neutral uniformity_refl)
+next
+  case (Suc n)
+  from plus_cont[unfolded uniformly_continuous_on_uniformity filterlim_def le_filter_def, rule_format, OF Suc.prems]
+  obtain D1 D2 where \<open>eventually D1 uniformity\<close> and \<open>eventually D2 uniformity\<close> 
+    and D1D2E: \<open>D1 (x, y) \<Longrightarrow> D2 (x', y') \<Longrightarrow> E (x + x', y + y')\<close> for x y x' y'
+    apply atomize_elim
+    by (auto simp: eventually_prod_filter case_prod_beta uniformity_prod_def eventually_filtermap)
+
+  from Suc.IH[OF \<open>eventually D2 uniformity\<close>]
+  obtain D3 where \<open>eventually D3 uniformity\<close> and D3: \<open>card M \<le> n \<Longrightarrow> (\<forall>m\<in>M. D3 (f m, f' m)) \<Longrightarrow> D2 (sum f M, sum f' M)\<close> 
+    for M :: \<open>'a set\<close> and f f'
+    by metis
+
+  define D where \<open>D x \<equiv> D1 x \<and> D3 x\<close> for x
+  have \<open>eventually D uniformity\<close>
+    using D_def \<open>eventually D1 uniformity\<close> \<open>eventually D3 uniformity\<close> eventually_elim2 by blast
+
+  have \<open>E (sum f M, sum f' M)\<close> 
+    if \<open>card M \<le> Suc n\<close> and DM: \<open>\<forall>m\<in>M. D (f m, f' m)\<close>
+    for M :: \<open>'a set\<close> and f f'
+  proof (cases \<open>card M = 0\<close>)
+    case True
+    then show ?thesis
+      by (metis Suc.prems card_eq_0_iff sum.empty sum.infinite uniformity_refl) 
+  next
+    case False
+    with \<open>card M \<le> Suc n\<close> obtain N x where \<open>card N \<le> n\<close> and \<open>x \<notin> N\<close> and \<open>M = insert x N\<close>
+      by (metis card_Suc_eq less_Suc_eq_0_disj less_Suc_eq_le)
+
+    from DM have \<open>\<And>m. m\<in>N \<Longrightarrow> D (f m, f' m)\<close>
+      using \<open>M = insert x N\<close> by blast
+    with D3[OF \<open>card N \<le> n\<close>]
+    have D2_N: \<open>D2 (sum f N, sum f' N)\<close>
+      using D_def by blast
+
+    from DM 
+    have \<open>D (f x, f' x)\<close>
+      using \<open>M = insert x N\<close> by blast
+    then have \<open>D1 (f x, f' x)\<close>
+      by (simp add: D_def)
+
+    with D2_N
+    have \<open>E (f x + sum f N, f' x + sum f' N)\<close>
+      using D1D2E by presburger
+
+    then show \<open>E (sum f M, sum f' M)\<close>
+      by (metis False \<open>M = insert x N\<close> \<open>x \<notin> N\<close> card.infinite finite_insert sum.insert)
+  qed
+  with \<open>eventually D uniformity\<close>
+  show ?case 
+    by auto
+qed
 
 lemma infsum_is_Sigma:
   fixes A :: "'a set" and B :: "'a \<Rightarrow> 'b set"

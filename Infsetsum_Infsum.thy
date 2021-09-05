@@ -15,7 +15,7 @@ text \<open>The following theorem relates \<^const>\<open>abs_summable_on\<close
   nonetheless because it applies to a wider range of types. (The rhs requires second-countable
   Banach spaces while the lhs is well-defined on arbitrary real vector spaces.)\<close>
 
-lemma norm_infsum_exists_iff_abs_summable_on: \<open>infsum_exists (\<lambda>x. norm (f x)) A \<longleftrightarrow> f abs_summable_on A\<close>
+lemma abs_summable_equivalent: \<open>Infinite_Sum.infsum_abs_convergent f A \<longleftrightarrow> f abs_summable_on A\<close>
 proof
   define n where \<open>n x = norm (f x)\<close> for x
   assume \<open>infsum_exists n A\<close>
@@ -36,31 +36,18 @@ next
     by (auto simp add: n_def bdd_above_def)
 qed
 
-lemma abs_summable_infsum_exists: \<^latex>\<open>\label{lemma:abs_summable_infsum_exists}\<close>
+(* lemma abs_summable_infsum_exists: \<^latex>\<open>\label{lemma:abs_summable_infsum_exists}\<close>
   fixes f :: "'a\<Rightarrow>'b::{second_countable_topology,banach}" and A :: "'a set"
   assumes "f abs_summable_on A"
   shows "infsum_exists f A"
-  by (simp add: assms infsum_abs_convergent_exists norm_infsum_exists_iff_abs_summable_on)
-
-text \<open>The converse of @{thm [source] abs_summable_infsum_exists} does not hold:
-  Consider the Hilbert space of square-summable sequences.
-  Let $e_i$ denote the sequence with 1 in the $i$th position and 0 elsewhere.
-  Let $f(i) := e_i/i$ for $i\geq1$. We have \<^term>\<open>\<not> f abs_summable_on UNIV\<close> because $\lVert f(i)\rVert=1/i$
-  and thus the sum over $\lVert f(i)\rVert$ diverges. On the other hand, we have \<^term>\<open>infsum_exists f UNIV\<close>;
-  the limit is the sequence with $1/i$ in the $i$th position.
-
-  (We have not formalized this separating example here because to the best of our knowledge,
-  this Hilbert space has not been formalized in Isabelle/HOL yet.)\<close>
+  by (simp add: assms infsum_abs_convergent_exists norm_infsum_exists_iff_abs_summable_on) *)
 
 lemma infsetsum_infsum:
   assumes "f abs_summable_on A"
   shows "infsetsum f A = infsum f A"
 proof -
   have conv_sum_norm[simp]: "infsum_exists (\<lambda>x. norm (f x)) A"
-  proof (rule abs_summable_infsum_exists)
-    show "(\<lambda>x. norm (f x)) abs_summable_on A"
-      using assms by simp
-  qed    
+    using abs_summable_equivalent assms by blast
   have "norm (infsetsum f A - infsum f A) \<le> \<epsilon>" if "\<epsilon>>0" for \<epsilon>
   proof -
     define \<delta> where "\<delta> = \<epsilon>/2"
@@ -69,15 +56,8 @@ proof -
     proof -
       have sum_SUP: "ereal (infsetsum (\<lambda>x. norm (f x)) A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum (\<lambda>x. norm (f x)) F))"
         (is "_ = ?SUP")
-      proof (rule infsetsum_nonneg_is_SUPREMUM_ereal)
-        show "(\<lambda>x. norm (f x)) abs_summable_on A"
-          by (simp add: assms)          
-        show "0 \<le> norm (f x)"
-          if "x \<in> A"
-          for x :: 'a
-          using that
-          by simp 
-      qed
+        apply (rule infsetsum_nonneg_is_SUPREMUM_ereal)
+        using assms by auto
 
       have "(SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>F. norm (f x))) - ereal \<delta>
             < (SUP i\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>i. norm (f x)))"
@@ -105,49 +85,20 @@ proof -
         apply atomize_elim
         using \<open>F \<in> {F. finite F \<and> F \<subseteq> A}\<close> less_imp_le by blast
     qed
-    have "\<exists>F2\<subseteq>A.
-       finite F2 \<and>
-       dist (\<Sum>x\<in>F2. norm (f x)) (infsum (\<lambda>x. norm (f x)) A) \<le> \<delta>"
-      using infsum_finite_approximation[where f="(\<lambda>x. norm (f x))" and A=A and \<epsilon>=\<delta>]
-        abs_summable_infsum_exists assms by auto
-    then obtain F2 where F2A: "F2 \<subseteq> A" and finF2: "finite F2"
+    obtain F2 where F2A: "F2 \<subseteq> A" and finF2: "finite F2"
       and dist: "dist (sum (\<lambda>x. norm (f x)) F2) (infsum (\<lambda>x. norm (f x)) A) \<le> \<delta>"
-      by blast     
+      apply atomize_elim
+      by (metis \<open>0 < \<delta>\<close> conv_sum_norm infsum_finite_approximation)
     have  leq_eps': "infsum (\<lambda>x. norm (f x)) (A-F2) \<le> \<delta>"
-    proof (subst infsum_Diff)
-      show "infsum_exists (\<lambda>x. norm (f x)) A"
-        by simp        
-      show "infsum_exists (\<lambda>x. norm (f x)) F2"
-        by (simp add: finF2)        
-      show "F2 \<subseteq> A"
-        by (simp add: F2A)        
-      show "infsum (\<lambda>x. norm (f x)) A - infsum (\<lambda>x. norm (f x)) F2 \<le> \<delta>"
-        using dist finF2
-        by (auto simp: dist_norm)
-    qed 
+      apply (subst infsum_Diff)
+      using finF2 F2A dist by (auto simp: dist_norm)
     define F where "F = F1 \<union> F2"
     have FA: "F \<subseteq> A" and finF: "finite F" 
       unfolding F_def using F1A F2A finF1 finF2 by auto
 
     have "(\<Sum>\<^sub>ax\<in>A - (F1 \<union> F2). norm (f x)) \<le> (\<Sum>\<^sub>ax\<in>A - F1. norm (f x))"
-    proof (rule infsetsum_mono_neutral_left)
-      show "(\<lambda>x. norm (f x)) abs_summable_on A - (F1 \<union> F2)"
-        using abs_summable_on_subset assms by fastforce        
-      show "(\<lambda>x. norm (f x)) abs_summable_on A - F1"
-        using abs_summable_on_subset assms by fastforce        
-      show "norm (f x) \<le> norm (f x)"
-        if "x \<in> A - (F1 \<union> F2)"
-        for x :: 'a
-        using that
-        by auto 
-      show "A - (F1 \<union> F2) \<subseteq> A - F1"
-        by (simp add: Diff_mono)        
-      show "0 \<le> norm (f x)"
-        if "x \<in> A - F1 - (A - (F1 \<union> F2))"
-        for x :: 'a
-        using that
-        by auto 
-    qed
+      apply (rule infsetsum_mono_neutral_left)
+      using abs_summable_on_subset assms by fastforce+
     hence leq_eps: "infsetsum (\<lambda>x. norm (f x)) (A-F) \<le> \<delta>"
       unfolding F_def
       using leq_eps by linarith
@@ -159,14 +110,8 @@ proof -
       unfolding F_def 
       by (rule order.trans[OF _ leq_eps'])
     have "norm (infsetsum f A - infsetsum f F) = norm (infsetsum f (A-F))"
-    proof (subst infsetsum_Diff [symmetric])
-      show "f abs_summable_on A"
-        by (simp add: assms)          
-      show "F \<subseteq> A"
-        by (simp add: FA)          
-      show "norm (infsetsum f (A - F)) = norm (infsetsum f (A - F))"
-        by simp          
-    qed
+      apply (subst infsetsum_Diff [symmetric])
+      by (auto simp: FA assms)
     also have "\<dots> \<le> infsetsum (\<lambda>x. norm (f x)) (A-F)"
       using norm_infsetsum_bound by blast
     also have "\<dots> \<le> \<delta>"
@@ -174,16 +119,8 @@ proof -
     finally have diff1: "norm (infsetsum f A - infsetsum f F) \<le> \<delta>"
       by assumption
     have "norm (infsum f A - infsum f F) = norm (infsum f (A-F))"
-    proof (subst infsum_Diff [symmetric])
-      show "infsum_exists f A"
-        by (simp add: abs_summable_infsum_exists assms)        
-      show "infsum_exists f F"
-        by (simp add: finF)        
-      show "F \<subseteq> A"
-        by (simp add: FA)        
-      show "norm (infsum f (A - F)) = norm (infsum f (A - F))"
-        by simp        
-    qed
+      apply (subst infsum_Diff [symmetric])
+      by (auto simp: infsum_abs_convergent_exists assms finF FA)
     also have "\<dots> \<le> infsum (\<lambda>x. norm (f x)) (A-F)"
       by (simp add: finF infsum_exists_cofin_subset norm_infsum_bound)
     also have "\<dots> \<le> \<delta>"
