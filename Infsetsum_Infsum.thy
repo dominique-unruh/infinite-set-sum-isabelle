@@ -7,36 +7,11 @@ text \<open>This theory establishes the relationship between \<open>infsetsum\<c
   (The converse does not hold, even on types where \<open>infsetsum\<close> can be applied.)\<close>
 
 theory Infsetsum_Infsum
-  imports Infsetsum Infinite_Sum
+  imports Infsetsum "HOL-Analysis.Infinite_Sum"
 begin
 
-no_notation infsum_abs_convergent (infixr "abs'_summable'_on" 46)
+no_notation Infinite_Sum.abs_summable_on (infixr "abs'_summable'_on" 46)
 
-text \<open>The following theorem relates \<^const>\<open>abs_summable_on\<close> with \<^const>\<open>infsum_abs_convergent\<close>.
-  Note that while this theorem expresses an equivalence, the notion on the lhs is more general
-  nonetheless because it applies to a wider range of types. (The rhs requires second-countable
-  Banach spaces while the lhs is well-defined on arbitrary real vector spaces.)\<close>
-
-lemma abs_summable_equivalent: \<open>Infinite_Sum.infsum_abs_convergent f A \<longleftrightarrow> f abs_summable_on A\<close>
-proof (rule iffI)
-  define n where \<open>n x = norm (f x)\<close> for x
-  assume \<open>n summable_on A\<close>
-  then have \<open>sum n F \<le> infsum n A\<close> if \<open>finite F\<close> and \<open>F\<subseteq>A\<close> for F
-    using that by (auto simp flip: infsum_finite simp: n_def[abs_def] intro!: infsum_mono_neutral)
-    
-  then show \<open>f abs_summable_on A\<close>
-    by (auto intro!: abs_summable_finite_sumsI simp: n_def)
-next
-  define n where \<open>n x = norm (f x)\<close> for x
-  assume \<open>f abs_summable_on A\<close>
-  then have \<open>n abs_summable_on A\<close>
-    by (simp add: \<open>f abs_summable_on A\<close> n_def)
-  then have \<open>sum n F \<le> infsetsum n A\<close> if \<open>finite F\<close> and \<open>F\<subseteq>A\<close> for F
-    using that by (auto simp flip: infsetsum_finite simp: n_def[abs_def] intro!: infsetsum_mono_neutral)
-  then show \<open>n summable_on A\<close>
-    apply (rule_tac pos_summable_on)
-    by (auto simp add: n_def bdd_above_def)
-qed
 
 (* lemma abs_summable_summable_on: \<^latex>\<open>\label{lemma:abs_summable_summable_on}\<close>
   fixes f :: "'a\<Rightarrow>'b::{second_countable_topology,banach}" and A :: "'a set"
@@ -44,107 +19,5 @@ qed
   shows "f summable_on A"
   by (simp add: assms infsum_abs_convergent_exists norm_summable_on_iff_abs_summable_on) *)
 
-lemma infsetsum_infsum:
-  assumes "f abs_summable_on A"
-  shows "infsetsum f A = infsum f A"
-proof -
-  have conv_sum_norm[simp]: "(\<lambda>x. norm (f x)) summable_on A"
-    using abs_summable_equivalent assms by blast
-  have "norm (infsetsum f A - infsum f A) \<le> \<epsilon>" if "\<epsilon>>0" for \<epsilon>
-  proof -
-    define \<delta> where "\<delta> = \<epsilon>/2"
-    with that have [simp]: "\<delta> > 0" by simp
-    obtain F1 where F1A: "F1 \<subseteq> A" and finF1: "finite F1" and leq_eps: "infsetsum (\<lambda>x. norm (f x)) (A-F1) \<le> \<delta>"
-    proof -
-      have sum_SUP: "ereal (infsetsum (\<lambda>x. norm (f x)) A) = (SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (sum (\<lambda>x. norm (f x)) F))"
-        (is "_ = ?SUP")
-        apply (rule infsetsum_nonneg_is_SUPREMUM_ereal)
-        using assms by auto
-
-      have "(SUP F\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>F. norm (f x))) - ereal \<delta>
-            < (SUP i\<in>{F. finite F \<and> F \<subseteq> A}. ereal (\<Sum>x\<in>i. norm (f x)))"
-        using \<open>\<delta>>0\<close>
-        by (metis diff_strict_left_mono diff_zero ereal_less_eq(3) ereal_minus(1) not_le sum_SUP)
-      then obtain F where "F\<in>{F. finite F \<and> F \<subseteq> A}" and "ereal (sum (\<lambda>x. norm (f x)) F) > ?SUP - ereal (\<delta>)"
-        by (meson less_SUP_iff)
-        
-      hence "sum (\<lambda>x. norm (f x)) F > infsetsum (\<lambda>x. norm (f x)) A -  (\<delta>)"
-        unfolding sum_SUP[symmetric] by auto
-      hence "\<delta> > infsetsum (\<lambda>x. norm (f x)) (A-F)"
-      proof (subst infsetsum_Diff)
-        show "(\<lambda>x. norm (f x)) abs_summable_on A"
-          if "(\<Sum>\<^sub>ax\<in>A. norm (f x)) - \<delta> < (\<Sum>x\<in>F. norm (f x))"
-          using that
-          by (simp add: assms) 
-        show "F \<subseteq> A"
-          if "(\<Sum>\<^sub>ax\<in>A. norm (f x)) - \<delta> < (\<Sum>x\<in>F. norm (f x))"
-          using that \<open>F \<in> {F. finite F \<and> F \<subseteq> A}\<close> by blast 
-        show "(\<Sum>\<^sub>ax\<in>A. norm (f x)) - (\<Sum>\<^sub>ax\<in>F. norm (f x)) < \<delta>"
-          if "(\<Sum>\<^sub>ax\<in>A. norm (f x)) - \<delta> < (\<Sum>x\<in>F. norm (f x))"
-          using that \<open>F \<in> {F. finite F \<and> F \<subseteq> A}\<close> by auto 
-      qed
-      thus ?thesis using that 
-        apply atomize_elim
-        using \<open>F \<in> {F. finite F \<and> F \<subseteq> A}\<close> less_imp_le by blast
-    qed
-    obtain F2 where F2A: "F2 \<subseteq> A" and finF2: "finite F2"
-      and dist: "dist (sum (\<lambda>x. norm (f x)) F2) (infsum (\<lambda>x. norm (f x)) A) \<le> \<delta>"
-      apply atomize_elim
-      by (metis \<open>0 < \<delta>\<close> conv_sum_norm infsum_finite_approximation)
-    have  leq_eps': "infsum (\<lambda>x. norm (f x)) (A-F2) \<le> \<delta>"
-      apply (subst infsum_Diff)
-      using finF2 F2A dist by (auto simp: dist_norm)
-    define F where "F = F1 \<union> F2"
-    have FA: "F \<subseteq> A" and finF: "finite F" 
-      unfolding F_def using F1A F2A finF1 finF2 by auto
-
-    have "(\<Sum>\<^sub>ax\<in>A - (F1 \<union> F2). norm (f x)) \<le> (\<Sum>\<^sub>ax\<in>A - F1. norm (f x))"
-      apply (rule infsetsum_mono_neutral_left)
-      using abs_summable_on_subset assms by fastforce+
-    hence leq_eps: "infsetsum (\<lambda>x. norm (f x)) (A-F) \<le> \<delta>"
-      unfolding F_def
-      using leq_eps by linarith
-    have "infsum (\<lambda>x. norm (f x)) (A - (F1 \<union> F2))
-          \<le> infsum (\<lambda>x. norm (f x)) (A - F2)"
-      apply (rule infsum_mono_neutral)
-      using finF by (auto simp add: finF2 summable_on_cofin_subset F_def)
-    hence leq_eps': "infsum (\<lambda>x. norm (f x)) (A-F) \<le> \<delta>"
-      unfolding F_def 
-      by (rule order.trans[OF _ leq_eps'])
-    have "norm (infsetsum f A - infsetsum f F) = norm (infsetsum f (A-F))"
-      apply (subst infsetsum_Diff [symmetric])
-      by (auto simp: FA assms)
-    also have "\<dots> \<le> infsetsum (\<lambda>x. norm (f x)) (A-F)"
-      using norm_infsetsum_bound by blast
-    also have "\<dots> \<le> \<delta>"
-      using leq_eps by simp
-    finally have diff1: "norm (infsetsum f A - infsetsum f F) \<le> \<delta>"
-      by assumption
-    have "norm (infsum f A - infsum f F) = norm (infsum f (A-F))"
-      apply (subst infsum_Diff [symmetric])
-      by (auto simp: infsum_abs_convergent_exists assms finF FA)
-    also have "\<dots> \<le> infsum (\<lambda>x. norm (f x)) (A-F)"
-      by (simp add: finF summable_on_cofin_subset norm_infsum_bound)
-    also have "\<dots> \<le> \<delta>"
-      using leq_eps' by simp
-    finally have diff2: "norm (infsum f A - infsum f F) \<le> \<delta>"
-      by assumption
-
-    have x1: "infsetsum f F = infsum f F"
-      using finF by simp
-    have "norm (infsetsum f A - infsum f A) \<le> norm (infsetsum f A - infsetsum f F) + norm (infsum f A - infsum f F)"
-      apply (rule_tac norm_diff_triangle_le)
-       apply auto
-      by (simp_all add: x1 norm_minus_commute)
-    also have "\<dots> \<le> \<epsilon>"
-      using diff1 diff2 \<delta>_def by linarith
-    finally show ?thesis
-      by assumption
-  qed
-  hence "norm (infsetsum f A - infsum f A) = 0"
-    by (meson antisym_conv1 dense_ge norm_not_less_zero)
-  thus ?thesis
-    by auto
-qed
 
 end

@@ -4,7 +4,6 @@ text \<open>This theory is provided merely as a convenience to load everything i
 
 theory All
   imports
-    Infinite_Sum
     Infsetsum
     Infsetsum_Infsum
 begin
