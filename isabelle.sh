@@ -14,6 +14,6 @@ else
     FILES=()
 fi
 
-SESSION=Pure
+SESSION=HOL
 
 "$ISABELLE_DIR"/bin/isabelle jedit -l "$SESSION" -d "$DIR" "$@" "${FILES[@]}" &

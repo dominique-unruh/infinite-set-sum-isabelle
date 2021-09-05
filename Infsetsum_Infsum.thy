@@ -10,15 +10,17 @@ theory Infsetsum_Infsum
   imports Infsetsum Infinite_Sum
 begin
 
-text \<open>The following theorem relates \<^const>\<open>abs_summable_on\<close> with \<^const>\<open>infsum_exists\<close>.
+no_notation infsum_abs_convergent (infixr "abs'_summable'_on" 46)
+
+text \<open>The following theorem relates \<^const>\<open>abs_summable_on\<close> with \<^const>\<open>infsum_abs_convergent\<close>.
   Note that while this theorem expresses an equivalence, the notion on the lhs is more general
   nonetheless because it applies to a wider range of types. (The rhs requires second-countable
   Banach spaces while the lhs is well-defined on arbitrary real vector spaces.)\<close>
 
 lemma abs_summable_equivalent: \<open>Infinite_Sum.infsum_abs_convergent f A \<longleftrightarrow> f abs_summable_on A\<close>
-proof
+proof (rule iffI)
   define n where \<open>n x = norm (f x)\<close> for x
-  assume \<open>infsum_exists n A\<close>
+  assume \<open>n summable_on A\<close>
   then have \<open>sum n F \<le> infsum n A\<close> if \<open>finite F\<close> and \<open>F\<subseteq>A\<close> for F
     using that by (auto simp flip: infsum_finite simp: n_def[abs_def] intro!: infsum_mono_neutral)
     
@@ -31,22 +33,22 @@ next
     by (simp add: \<open>f abs_summable_on A\<close> n_def)
   then have \<open>sum n F \<le> infsetsum n A\<close> if \<open>finite F\<close> and \<open>F\<subseteq>A\<close> for F
     using that by (auto simp flip: infsetsum_finite simp: n_def[abs_def] intro!: infsetsum_mono_neutral)
-  then show \<open>infsum_exists n A\<close>
-    apply (rule_tac pos_infsum_exists)
+  then show \<open>n summable_on A\<close>
+    apply (rule_tac pos_summable_on)
     by (auto simp add: n_def bdd_above_def)
 qed
 
-(* lemma abs_summable_infsum_exists: \<^latex>\<open>\label{lemma:abs_summable_infsum_exists}\<close>
+(* lemma abs_summable_summable_on: \<^latex>\<open>\label{lemma:abs_summable_summable_on}\<close>
   fixes f :: "'a\<Rightarrow>'b::{second_countable_topology,banach}" and A :: "'a set"
   assumes "f abs_summable_on A"
-  shows "infsum_exists f A"
-  by (simp add: assms infsum_abs_convergent_exists norm_infsum_exists_iff_abs_summable_on) *)
+  shows "f summable_on A"
+  by (simp add: assms infsum_abs_convergent_exists norm_summable_on_iff_abs_summable_on) *)
 
 lemma infsetsum_infsum:
   assumes "f abs_summable_on A"
   shows "infsetsum f A = infsum f A"
 proof -
-  have conv_sum_norm[simp]: "infsum_exists (\<lambda>x. norm (f x)) A"
+  have conv_sum_norm[simp]: "(\<lambda>x. norm (f x)) summable_on A"
     using abs_summable_equivalent assms by blast
   have "norm (infsetsum f A - infsum f A) \<le> \<epsilon>" if "\<epsilon>>0" for \<epsilon>
   proof -
@@ -105,7 +107,7 @@ proof -
     have "infsum (\<lambda>x. norm (f x)) (A - (F1 \<union> F2))
           \<le> infsum (\<lambda>x. norm (f x)) (A - F2)"
       apply (rule infsum_mono_neutral)
-      using finF by (auto simp add: finF2 infsum_exists_cofin_subset F_def)
+      using finF by (auto simp add: finF2 summable_on_cofin_subset F_def)
     hence leq_eps': "infsum (\<lambda>x. norm (f x)) (A-F) \<le> \<delta>"
       unfolding F_def 
       by (rule order.trans[OF _ leq_eps'])
@@ -122,7 +124,7 @@ proof -
       apply (subst infsum_Diff [symmetric])
       by (auto simp: infsum_abs_convergent_exists assms finF FA)
     also have "\<dots> \<le> infsum (\<lambda>x. norm (f x)) (A-F)"
-      by (simp add: finF infsum_exists_cofin_subset norm_infsum_bound)
+      by (simp add: finF summable_on_cofin_subset norm_infsum_bound)
     also have "\<dots> \<le> \<delta>"
       using leq_eps' by simp
     finally have diff2: "norm (infsum f A - infsum f F) \<le> \<delta>"
