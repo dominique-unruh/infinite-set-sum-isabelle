@@ -5,7 +5,7 @@ text \<open>This theory proves various facts about \<open>infsetsum\<close>, the
   infinite sums in the Isabelle/HOL standard library. Those facts are not related to our new definition.\<close>
 
 theory Infsetsum
-  imports "HOL-Analysis.Infinite_Set_Sum" Complex_Order
+  imports "HOL-Analysis.Infinite_Set_Sum" "HOL-Library.Complex_Order"
 begin
 
 subsection \<open>General properties\<close>

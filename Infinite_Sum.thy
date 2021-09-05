@@ -37,7 +37,7 @@ theory Infinite_Sum
   imports
     "HOL-Analysis.Elementary_Topology"
     "HOL-Library.Extended_Nonnegative_Real"
-    Complex_Order
+    "HOL-Library.Complex_Order"
 begin
 
 subsection \<open>Definition and syntax\<close>
